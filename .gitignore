@@ -1,0 +1,19 @@
+# Môi trường và bộ nhớ tạm
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# Kết quả đóng gói (dựng lại bằng tools/build.py)
+build/
+dist/
+
+# Fixture sinh tự động
+tests/fixtures/generated/
+
+# Rác của Windows / trình soạn thảo
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/

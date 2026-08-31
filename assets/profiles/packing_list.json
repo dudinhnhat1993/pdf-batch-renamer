@@ -1,0 +1,69 @@
+{
+  "id": "packing-list",
+  "name": "Packing List",
+  "doctype": "PL",
+  "enabled": true,
+  "priority": 15,
+  "condition_mode": "any",
+  "conditions": [
+    {
+      "kind": "keyword",
+      "value": "PACKING LIST",
+      "case_sensitive": false
+    },
+    {
+      "kind": "keyword",
+      "value": "PACKING SLIP",
+      "case_sensitive": false
+    }
+  ],
+  "fields": [
+    {
+      "name": "number",
+      "label": "Số packing list",
+      "required": true,
+      "patterns": [
+        "Packing\\s*List\\s*(?:No|Number)\\.?\\s*[:\\-]?\\s*([A-Z0-9][A-Z0-9\\-/._]*)",
+        "P/L\\s*(?:No|Number)?\\.?\\s*[:\\-]?\\s*([A-Z0-9][A-Z0-9\\-/._]*)",
+        "Invoice\\s*(?:No|Number)\\.?\\s*[:\\-]?\\s*([A-Z0-9][A-Z0-9\\-/._]*)"
+      ],
+      "validate": "regex",
+      "validate_regex": "^[A-Z0-9][A-Z0-9\\-/._]{1,29}$"
+    },
+    {
+      "name": "doc_date",
+      "label": "Ngày",
+      "required": false,
+      "patterns": [
+        "Date\\s*[:\\-]?\\s*(\\d{1,2}[/\\-.]\\d{1,2}[/\\-.]\\d{2,4})",
+        "Ng\\u00e0y\\s*[:\\-]?\\s*(\\d{1,2}[/\\-.]\\d{1,2}[/\\-.]\\d{2,4})"
+      ],
+      "validate": "date"
+    },
+    {
+      "name": "company",
+      "label": "Người gửi",
+      "required": false,
+      "patterns": [
+        "(?:Shipper|Seller|Exporter)\\s*[:\\-]?\\s*([^\\n]{2,60})"
+      ],
+      "normalize_company": true
+    }
+  ],
+  "date_formats": [
+    "dd/mm/yyyy",
+    "dd-mm-yyyy",
+    "dd.mm.yyyy",
+    "yyyy-MM-dd",
+    "dd/mm/yy",
+    "dd-mm-yy",
+    "dd.mm.yy"
+  ],
+  "template": "{doc_date}_{doctype}_{number}_{company}",
+  "ai_enabled": false,
+  "version": 1,
+  "samples": [],
+  "is_fallback": false,
+  "exclude_conditions": [],
+  "fill_optional_fields": true
+}

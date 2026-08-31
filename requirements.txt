@@ -1,0 +1,26 @@
+# PDF Batch Renamer — phụ thuộc ghim version chính xác.
+# Cài:  python -m venv .venv && .venv\Scripts\pip install -r requirements.txt
+
+# --- GUI (Phase 2) ---
+PySide6==6.11.2
+
+# --- Đọc PDF ---
+pdfplumber==0.11.10        # text layer + tọa độ từng từ
+pymupdf==1.28.2            # render trang thành ảnh (OCR, xem trước, barcode)
+pypdf==6.16.2              # metadata + AcroForm + tạo PDF mã hóa cho fixture
+
+# --- OCR / Barcode ---
+pytesseract==0.3.13        # cần Tesseract cài riêng, xem README
+pyzbar==0.1.9              # cần Visual C++ Redistributable 2013 x64
+pillow==12.3.0
+
+# --- Dữ liệu ---
+openpyxl==3.1.5            # master data Excel
+watchdog==6.0.0            # watch folder
+keyring==25.7.0            # lưu API key trong Windows Credential Manager
+
+# --- Dev / test ---
+pytest==9.1.1
+pytest-mock==3.15.1
+reportlab==5.0.1           # chỉ dùng để sinh fixture PDF trong test
+ruff==0.16.5
