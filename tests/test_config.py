@@ -82,9 +82,9 @@ class TestKeyring:
 class TestSeed:
     def test_nap_profile_mau_lan_dau(self, tmp_path):
         store = ProfileStore(tmp_path / "profiles")
-        assert seed_defaults(store) == 4
+        assert seed_defaults(store) == 5
         names = {p.name for p in store.load_all()}
-        assert names == {"Invoice", "Bill of Lading", "Packing List", "Chung"}
+        assert names == {"Invoice", "Bill of Lading", "Packing List", "Chung", "Chuyển khoản ngân hàng"}
 
     def test_khong_de_rule_nguoi_dung_da_co(self, tmp_path):
         from src.core.models import Profile
@@ -96,7 +96,7 @@ class TestSeed:
 
     def test_build_context_tao_du_thu_muc_va_profile(self, isolated_home):
         ctx = build_context()
-        assert len(ctx.profiles) == 4
+        assert len(ctx.profiles) == 5
         assert (isolated_home / "profiles").exists()
         assert (isolated_home / "sessions").exists()
         assert (isolated_home / "logs").exists()

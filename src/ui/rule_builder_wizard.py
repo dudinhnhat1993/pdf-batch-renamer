@@ -59,6 +59,7 @@ from ..core.zonal import (
     zone_lines,
     zone_looks_ambiguous,
 )
+from .icons import get_app_icon
 from .pdf_view import PdfPreviewWidget
 
 logger = logging.getLogger(__name__)
@@ -131,6 +132,8 @@ BUILTIN_TOKENS = [
 ]
 
 
+
+
 class _State:
     """Dữ liệu dùng chung giữa các bước của wizard."""
 
@@ -161,6 +164,7 @@ class SamplePage(QWizardPage):
 
     def __init__(self, wizard: RuleBuilderWizard) -> None:
         super().__init__()
+        self.setWindowIcon(get_app_icon())
         self.wiz = wizard
         self.setTitle("Bước 1/4 — Nạp chứng từ mẫu")
         self.setSubTitle(
@@ -358,7 +362,10 @@ class FieldDialog(QDialog):
         self, sample_text: str, selected: str, existing: list[str] | None = None, parent=None
     ) -> None:
         super().__init__(parent)
+        self.setWindowIcon(get_app_icon())
         self.setWindowTitle("Tạo field từ giá trị đã chọn")
+        self.setMinimumWidth(620)
+        self.setMaximumWidth(760)
         self.resize(680, 560)
         self.sample_text = sample_text
         self.selected = selected
@@ -376,8 +383,10 @@ class FieldDialog(QDialog):
         self.normalize = QCheckBox("Chuẩn hóa theo từ điển tên công ty")
         self.from_barcode = QCheckBox("Cho phép lấy từ barcode/QR nếu không tìm thấy trong text")
 
+        val_label = QLabel(f"<b>{selected}</b>")
+        val_label.setWordWrap(True)
         form = QFormLayout()
-        form.addRow("Giá trị đã chọn:", QLabel(f"<b>{selected}</b>"))
+        form.addRow("Giá trị đã chọn:", val_label)
         form.addRow("Tên field:", self.name)
         form.addRow("Nhãn hiển thị:", self.label)
         form.addRow(self.required)
@@ -1145,7 +1154,7 @@ class RuleBuilderWizard(QWizard):
         self.state.sample_path = path
         self.state.document = document
         self.state.profile.samples = [str(path)]
-        self.preview.load_document(doc, document.pages, dpi=150)
+        self.preview.load_document(doc, document.pages, dpi=200)
         self._move_preview(self.currentId())
 
     # ------------------------------------------------------------- kết thúc
@@ -1168,6 +1177,12 @@ class RuleBuilderWizard(QWizard):
             f"File mẫu đã lưu để chạy regression test khi bạn sửa rule về sau.",
         )
         super().accept()
+
+    def closeEvent(self, event) -> None:
+        self.state.close()
+        import gc
+        gc.collect()
+        super().closeEvent(event)
 
     def reject(self) -> None:
         self.state.close()

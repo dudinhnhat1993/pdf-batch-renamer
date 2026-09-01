@@ -48,11 +48,12 @@ class Mover:
 
     # ------------------------------------------------------------- thư mục
 
-    def destination_dir(self, when: date | None = None) -> Path:
-        """Thư mục đích theo NGÀY XỬ LÝ hiện tại (không phải ngày trên chứng từ)."""
+    def destination_dir(self, when: date | None = None, root: Path | str | None = None) -> Path:
+        """Thư mục đích theo NGÀY XỬ LÝ hiện tại (hoặc thư mục riêng của profile)."""
+        base = Path(root) if root else self.output_root
         if not self.config.subfolder_enabled:
-            return self.output_root
-        return self.output_root / render_subfolder(self.config.subfolder_pattern, when)
+            return base
+        return base / render_subfolder(self.config.subfolder_pattern, when)
 
     def quarantine_dir(self) -> Path:
         return self.output_root / QUARANTINE_DIRNAME
@@ -99,8 +100,23 @@ class Mover:
                 shutil.move(str(job.source), str(dest))
             else:
                 shutil.copy2(str(job.source), str(dest))
-        except OSError as exc:
-            raise PdfRenamerError(f"Không ghi được file đích {dest.name}: {exc}") from exc
+        except OSError:
+            import gc
+            gc.collect()
+            time.sleep(0.15)
+            try:
+                if self.config.mode == "move":
+                    shutil.move(str(job.source), str(dest))
+                else:
+                    shutil.copy2(str(job.source), str(dest))
+            except OSError as exc2:
+                err_str = str(exc2)
+                if "WinError 32" in err_str or "being used by another process" in err_str:
+                    raise PdfRenamerError(
+                        f"File đang bị mở/khóa bởi ứng dụng khác ({job.source.name}). "
+                        f"Vui lòng đóng file trong Adobe Reader / Trình duyệt rồi bấm Áp dụng."
+                    ) from exc2
+                raise PdfRenamerError(f"Không ghi được file đích {dest.name}: {exc2}") from exc2
 
         self._log(self.config.mode, job.source, dest, backup)
         return dest

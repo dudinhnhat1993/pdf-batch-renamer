@@ -158,10 +158,25 @@ class AppContext:
         self.config = config
         self.store = store
         self.db = db
+        self._learning = None
 
     @property
     def profiles(self):
         return self.store.load_all()
+
+    @property
+    def learning(self):
+        if self._learning is None:
+            from .learning import LearningStore
+            self._learning = LearningStore(self.db)
+        return self._learning
+
+    @property
+    def company_dict(self):
+        from .config import default_company_dictionary
+        from .normalize import CompanyDictionary
+        p = self.config.company_dictionary or default_company_dictionary()
+        return CompanyDictionary.load(p) if p else None
 
     def close(self) -> None:
         self.db.close()

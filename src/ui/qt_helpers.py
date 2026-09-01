@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QGuiApplication, QImage, QPixmap
 from PySide6.QtWidgets import QStyledItemDelegate
@@ -61,3 +63,28 @@ class ElideDelegate(QStyledItemDelegate):
     def initStyleOption(self, option, index) -> None:
         super().initStyleOption(option, index)
         option.textElideMode = self.mode
+
+
+def open_in_explorer(path: Path | str) -> bool:
+    """Mo file hoac thu muc trong File Explorer cua he dieu hanh."""
+    import os
+    import sys
+
+    from PySide6.QtCore import QUrl
+    from PySide6.QtGui import QDesktopServices
+
+    p = Path(path)
+    if not p.exists():
+        if p.parent.exists():
+            p = p.parent
+        else:
+            return False
+
+    try:
+        if sys.platform.startswith("win"):
+            os.startfile(str(p))
+            return True
+        else:
+            return QDesktopServices.openUrl(QUrl.fromLocalFile(str(p)))
+    except Exception:
+        return False

@@ -160,7 +160,7 @@ class AppConfig:
     backup_retention_days: int = 30
     masterdata_source: str = ""
     company_dictionary: str = ""  # rỗng = dictionaries/companies.json
-    theme: str = "system"
+    theme: str = "light"
     # Vị trí panel field trong cửa sổ chính: "bottom" (mặc định) hoặc "right"
     field_panel_area: str = "bottom"
     ocr: OcrConfig = field(default_factory=OcrConfig)

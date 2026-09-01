@@ -81,6 +81,7 @@ class BatchSummary:
     session_id: str = ""
     log_path: Path | None = None
     warnings: list[str] = field(default_factory=list)
+    jobs: list[FileJob] = field(default_factory=list)
 
 
 class Pipeline:
@@ -108,7 +109,14 @@ class Pipeline:
         self._lock = threading.Lock()
 
         self.extractor = extractor or self._build_extractor(dictionary)
-        self.mover = mover or Mover(config)
+        if mover:
+            self.mover = mover
+        else:
+            out_root = (
+                config.output_root
+                or str(Path.home() / "Documents" / "PDF_Renamed")
+            )
+            self.mover = Mover(config, output_root=out_root)
 
     # -------------------------------------------------------------- setup
 
@@ -284,7 +292,8 @@ class Pipeline:
             max_length=self.config.max_name_length,
             remove_accents=self.config.strip_accents,
         )
-        job.dest_dir = self.mover.destination_dir(when)
+        profile_root = profile.output_dir.strip() if (profile and profile.output_dir and profile.output_dir.strip()) else None
+        job.dest_dir = self.mover.destination_dir(when, root=profile_root)
         job.new_name = self.mover.reserve(job.dest_dir, filename)
         return job
 
@@ -332,6 +341,16 @@ class Pipeline:
         jobs: list[FileJob | None] = [None] * total
         if not total:
             return []
+        if total == 1:
+            job = self.plan_one(
+                files[0],
+                dry_run=dry_run,
+                forced_profile=forced_profile,
+                when=when,
+            )
+            if progress:
+                progress(job, 1, 1)
+            return [job]
 
         index_of: dict[Future, int] = {}
         slots: dict[Future, _WorkSlot] = {}
@@ -433,7 +452,7 @@ class Pipeline:
         save_dataset: bool = True,
     ) -> BatchSummary:
         """Thực thi: file ổn -> output, file lỗi -> _Loi/. Ghi registry, provenance, thống kê."""
-        summary = BatchSummary(total=len(jobs), session_id=self.mover.session_id)
+        summary = BatchSummary(total=len(jobs), session_id=self.mover.session_id, jobs=jobs)
         for index, job in enumerate(jobs, start=1):
             try:
                 if job.status == JobStatus.DUPLICATE:

@@ -27,6 +27,7 @@ from PySide6.QtWidgets import (
 from ..core.learning import LearningStore
 from ..core.models import Profile
 from ..core.report import ProfileStat, profile_stats
+from .icons import get_app_icon
 
 logger = logging.getLogger(__name__)
 
@@ -39,11 +40,14 @@ HEALTH_COLORS = {
 }
 
 
+
+
 class StatsDialog(QDialog):
     """Bảng thống kê + xuất dataset. Không sửa gì, chỉ đọc."""
 
     def __init__(self, learning: LearningStore, profiles: list[Profile], parent=None) -> None:
         super().__init__(parent)
+        self.setWindowIcon(get_app_icon())
         self.setWindowTitle("Thống kê 30 ngày")
         self.resize(880, 560)
         self.learning = learning

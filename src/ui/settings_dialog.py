@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import logging
+import threading
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -13,6 +14,7 @@ from PySide6.QtWidgets import (
     QDialogButtonBox,
     QFileDialog,
     QFormLayout,
+    QGroupBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -28,6 +30,7 @@ from PySide6.QtWidgets import (
 from ..core.config import AppConfig, delete_api_key, get_api_key, save_config, set_api_key
 from ..core.models import Profile
 from ..core.ocr import OcrEngine, find_tesseract, install_language_pack
+from .icons import get_app_icon
 
 logger = logging.getLogger(__name__)
 
@@ -58,11 +61,14 @@ def _browse_row(line: QLineEdit, on_click) -> QWidget:
     return box
 
 
+
+
 class SettingsDialog(QDialog):
     """Đọc AppConfig vào form, ghi ngược lại khi bấm Lưu."""
 
     def __init__(self, config: AppConfig, profiles: list[Profile], parent=None) -> None:
         super().__init__(parent)
+        self.setWindowIcon(get_app_icon())
         self.setWindowTitle("Cài đặt")
         self.resize(720, 620)
         self.config = config
@@ -74,21 +80,104 @@ class SettingsDialog(QDialog):
         self.tabs.addTab(self._tab_ocr(), "OCR && Barcode")
         self.tabs.addTab(self._tab_ai(), "AI (tùy chọn)")
         self.tabs.addTab(self._tab_watch(), "Watch folder")
+        self.tabs.currentChanged.connect(self._on_tab_changed)
+        self._ocr_checked = False
+        self._ai_key_loaded = False
         tabs = self.tabs
 
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel
         )
-        buttons.button(QDialogButtonBox.StandardButton.Save).setText("Lưu")
-        buttons.button(QDialogButtonBox.StandardButton.Cancel).setText("Hủy")
+        save_btn = buttons.button(QDialogButtonBox.StandardButton.Save)
+        save_btn.setText("Lưu")
+        save_btn.setProperty("variant", "primary")
+        save_btn.setMinimumWidth(90)
+        cancel_btn = buttons.button(QDialogButtonBox.StandardButton.Cancel)
+        cancel_btn.setText("Hủy")
+        cancel_btn.setProperty("variant", "secondary")
+        cancel_btn.setMinimumWidth(80)
         buttons.accepted.connect(self._save)
         buttons.rejected.connect(self.reject)
 
         layout = QVBoxLayout(self)
+        layout.addWidget(self._build_preset_bar())
         layout.addWidget(tabs, 1)
         layout.addWidget(buttons)
 
         self._load()
+
+    # ------------------------------------------------------------- Presets
+    def _build_preset_bar(self) -> QWidget:
+        box = QGroupBox("Cấu hình nhanh (Khuyên dùng)")
+        layout = QHBoxLayout(box)
+        layout.setContentsMargins(10, 8, 10, 8)
+
+        btn_default = QPushButton("Mặc định chuẩn")
+        btn_default.setToolTip("Cấu hình tối ưu: tự nhận diện chứng từ, lưu trữ an toàn, gom thư mục ngày.")
+        btn_default.clicked.connect(lambda: self._apply_quick_preset("default"))
+
+        btn_fast = QPushButton("Siêu tốc (PDF chuẩn)")
+        btn_fast.setToolTip("Tắt OCR quét ảnh để xử lý hàng nghìn hóa đơn điện tử / PDF có sẵn text trong vài giây.")
+        btn_fast.clicked.connect(lambda: self._apply_quick_preset("fast"))
+
+        btn_deep = QPushButton("Quét sâu (Scan & Barcode)")
+        btn_deep.setToolTip("Bật nhận dạng ký tự quang học OCR tiếng Việt và quét mã vạch cho tài liệu scan, ảnh chụp.")
+        btn_deep.clicked.connect(lambda: self._apply_quick_preset("deep"))
+
+        layout.addWidget(btn_default)
+        layout.addWidget(btn_fast)
+        layout.addWidget(btn_deep)
+        return box
+
+    def _apply_quick_preset(self, preset_name: str) -> None:
+        if preset_name == "default":
+            self.mode.setCurrentIndex(0)
+            self.subfolder_enabled.setChecked(True)
+            self.subfolder_pattern.setText("{YYYY}-{MM}-{DD}")
+            self.strip_accents.setChecked(False)
+            self.max_name_length.setValue(120)
+            self.workers.setValue(4)
+            self.timeout_seconds.setValue(30)
+            self.dedup_enabled.setChecked(True)
+            self.ocr_enabled.setChecked(True)
+            self.ocr_min_chars.setValue(50)
+            self.ocr_max_pages.setValue(3)
+            self.ocr_dpi.setValue(300)
+            self.barcode_enabled.setChecked(True)
+            self.barcode_max_pages.setValue(3)
+            QMessageBox.information(
+                self, "Cấu hình nhanh",
+                "Đã áp dụng Preset: [Mặc định chuẩn]\n\n"
+                "- Tự nhận diện và trích xuất mọi loại chứng từ\n"
+                "- Tự động gom file vào thư mục theo ngày\n"
+                "- Chế độ Copy an toàn & Chống xử lý trùng lặp"
+            )
+        elif preset_name == "fast":
+            self.ocr_enabled.setChecked(False)
+            self.barcode_enabled.setChecked(False)
+            self.workers.setValue(6)
+            self.timeout_seconds.setValue(10)
+            QMessageBox.information(
+                self, "Cấu hình nhanh",
+                "Đã áp dụng Preset: [Siêu tốc (PDF chuẩn)]\n\n"
+                "- Tắt OCR & Barcode để đạt tốc độ xử lý tối đa\n"
+                "- Thích hợp cho hóa đơn điện tử, hợp đồng, phiếu PDF văn phòng"
+            )
+        elif preset_name == "deep":
+            self.ocr_enabled.setChecked(True)
+            self.ocr_min_chars.setValue(30)
+            self.ocr_max_pages.setValue(5)
+            self.ocr_dpi.setValue(300)
+            self.barcode_enabled.setChecked(True)
+            self.barcode_max_pages.setValue(5)
+            self.workers.setValue(3)
+            self.timeout_seconds.setValue(60)
+            QMessageBox.information(
+                self, "Cấu hình nhanh",
+                "Đã áp dụng Preset: [Quét sâu (Scan & Barcode)]\n\n"
+                "- Bật OCR quét kỹ tới 5 trang đầu\n"
+                "- Nhận dạng mã vạch, QR Code và số container ISO"
+            )
 
     TAB_GENERAL, TAB_OCR, TAB_AI, TAB_WATCH = range(4)
 
@@ -157,6 +246,11 @@ class SettingsDialog(QDialog):
         form.addRow(
             "Từ điển tên công ty:", _browse_row(self.company_dictionary, self._pick_dictionary)
         )
+
+        self.theme_mode = QComboBox()
+        self.theme_mode.addItem("Sáng — Nền sáng, rõ nét, dễ nhìn (Khuyên dùng)", "light")
+        self.theme_mode.addItem("Tối — Dark Mode", "dark")
+        form.addRow("Giao diện màu sắc:", self.theme_mode)
         return page
 
     def _tab_ocr(self) -> QWidget:
@@ -382,6 +476,8 @@ class SettingsDialog(QDialog):
         self.passwords.setPlainText("\n".join(c.passwords))
         self.masterdata_source.setText(c.masterdata_source)
         self.company_dictionary.setText(c.company_dictionary)
+        idx_theme = self.theme_mode.findData(c.theme or "light")
+        self.theme_mode.setCurrentIndex(max(0, idx_theme))
 
         self.ocr_enabled.setChecked(c.ocr.enabled)
         self.ocr_min_chars.setValue(c.ocr.min_chars)
@@ -398,15 +494,30 @@ class SettingsDialog(QDialog):
         self.ai_model.setText(c.ai.model)
         self.ai_timeout.setValue(c.ai.timeout)
         self.ai_max_chars.setValue(c.ai.max_chars)
-        self.ai_api_key.setText(get_api_key())
-
         self.watch_enabled.setChecked(c.watch.enabled)
         self.watch_folder.setText(c.watch.folder)
         self.watch_stable.setValue(c.watch.stable_seconds)
         index = self.watch_profile.findData(c.watch.pinned_profile)
         self.watch_profile.setCurrentIndex(max(0, index))
 
-        self._check_tesseract()
+        # Không tải nặng khi khởi tạo — để giao diện mở lên tức thì trong 0.01s
+
+    def _on_tab_changed(self, index: int) -> None:
+        if index == self.TAB_OCR and not self._ocr_checked:
+            self._ocr_checked = True
+            self._check_tesseract()
+        elif index == self.TAB_AI and not self._ai_key_loaded:
+            self._ai_key_loaded = True
+            self._load_api_key_async()
+
+    def _load_api_key_async(self) -> None:
+        def worker():
+            try:
+                key = get_api_key()
+                QTimer.singleShot(0, lambda: self.ai_api_key.setText(key))
+            except Exception:
+                pass
+        threading.Thread(target=worker, daemon=True).start()
 
     def _save(self) -> None:
         c = self.config
@@ -427,6 +538,11 @@ class SettingsDialog(QDialog):
         c.passwords = [p for p in self.passwords.toPlainText().splitlines() if p]
         c.masterdata_source = self.masterdata_source.text().strip()
         c.company_dictionary = self.company_dictionary.text().strip()
+        new_theme = self.theme_mode.currentData() or "light"
+        old_theme = getattr(c, "theme", "light")
+        c.theme = new_theme
+        if old_theme != new_theme and self.parent() and hasattr(self.parent(), "_apply_theme"):
+            self.parent()._apply_theme(new_theme)
 
         c.ocr.enabled = self.ocr_enabled.isChecked()
         c.ocr.min_chars = self.ocr_min_chars.value()
@@ -499,45 +615,58 @@ class SettingsDialog(QDialog):
         return [code.strip() for code in raw.split("+") if code.strip()]
 
     def _check_tesseract(self) -> None:
-        """Kiểm tra ĐÚNG thư mục tessdata mà app thực dùng, không phải mặc định của Tesseract."""
-        exe = find_tesseract(self.tesseract_path.text().strip())
-        if not exe:
-            self.install_lang.setEnabled(False)
-            self.ocr_status.setText(
-                "Chưa tìm thấy Tesseract. PDF có sẵn text vẫn xử lý bình thường; "
-                "chỉ PDF scan là không đọc được."
-            )
-            return
+        """Kiểm tra Tesseract chạy ngầm trong Worker Thread để không khóa giao diện."""
+        self.ocr_status.setText("Đang kiểm tra Tesseract…")
+        tess_path = self.tesseract_path.text().strip()
+        langs_text = self.ocr_languages.text().strip() or "vie+eng"
+        dpi_val = self.ocr_dpi.value()
+        tessdata_p = self.tessdata_path.text().strip()
+        wanted = self._wanted_languages()
 
-        engine = OcrEngine(
-            self.tesseract_path.text().strip(),
-            self.ocr_languages.text().strip() or "vie+eng",
-            self.ocr_dpi.value(),
-            self.tessdata_path.text().strip(),
-        )
-        langs = engine.available_languages()
-        self._missing_languages = [c for c in self._wanted_languages() if c not in langs]
+        def worker():
+            exe = find_tesseract(tess_path)
+            if not exe:
+                def on_not_found():
+                    self.install_lang.setEnabled(False)
+                    self.ocr_status.setText(
+                        "Chưa tìm thấy Tesseract. PDF có sẵn text vẫn xử lý bình thường; "
+                        "chỉ PDF scan là không đọc được."
+                    )
+                QTimer.singleShot(0, on_not_found)
+                return
 
-        used = engine.tessdata or "(mặc định của Tesseract)"
-        lines = [
-            f"tesseract.exe: {exe}",
-            f"Thư mục tessdata đang dùng: {used}",
-            f"Ngôn ngữ có sẵn: {', '.join(langs) or 'không đọc được'}",
-        ]
-        if self._missing_languages:
-            lines.append(
-                "THIẾU GÓI: "
-                + ", ".join(self._missing_languages)
-                + " — bấm “Cài gói ngôn ngữ còn thiếu” bên trái."
-            )
-        else:
-            lines.append("OK — đủ gói ngôn ngữ đang cấu hình.")
-        self.ocr_status.setText("\n".join(lines))
-        # Dùng màu thay ký hiệu tick/cảnh báo: font Windows không phải máy nào cũng đủ glyph
-        self.ocr_status.setStyleSheet(
-            "QLabel { color: %s; }" % ("#9a6700" if self._missing_languages else "#1a7f37")
-        )
-        self.install_lang.setEnabled(bool(self._missing_languages))
+            engine = OcrEngine(tess_path, langs_text, dpi_val, tessdata_p)
+            try:
+                langs = engine.available_languages()
+            except Exception:
+                langs = []
+            missing = [c for c in wanted if c not in langs]
+
+            def on_done():
+                self._missing_languages = missing
+                used = engine.tessdata or "(mặc định của Tesseract)"
+                lines = [
+                    f"tesseract.exe: {exe}",
+                    f"Thư mục tessdata đang dùng: {used}",
+                    f"Ngôn ngữ có sẵn: {', '.join(langs) or 'không đọc được'}",
+                ]
+                if missing:
+                    lines.append(
+                        "THIẾU GÓI: "
+                        + ", ".join(missing)
+                        + " — bấm “Cài gói ngôn ngữ còn thiếu” bên trái."
+                    )
+                else:
+                    lines.append("OK — đủ gói ngôn ngữ đang cấu hình.")
+                self.ocr_status.setText("\n".join(lines))
+                self.ocr_status.setStyleSheet(
+                    "QLabel { color: %s; }" % ("#9a6700" if missing else "#1a7f37")
+                )
+                self.install_lang.setEnabled(bool(missing))
+
+            QTimer.singleShot(0, on_done)
+
+        threading.Thread(target=worker, daemon=True).start()
 
     def _install_missing_languages(self) -> None:
         """Cài gói còn thiếu vào tessdata riêng của app — không cần quyền admin."""

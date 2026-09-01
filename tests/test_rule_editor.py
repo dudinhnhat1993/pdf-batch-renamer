@@ -347,3 +347,89 @@ class TestDieuKienLoaiTru:
         editor.fill_optional.setChecked(False)
         editor._save_current()
         assert store.get("inv").fill_optional_fields is False
+
+
+class TestDirectFieldEditing:
+    def test_sua_field_cap_nhat_patterns_va_label(self, editor, monkeypatch):
+        from PySide6.QtWidgets import QDialog
+        from src.ui.rule_editor import EditFieldSpecDialog
+
+        editor.profile_list.setCurrentRow(row_of(editor, "inv"))
+        assert len(editor._draft_fields) > 0
+
+        # Giả lập sửa field đầu tiên
+        editor.fields_list.setCurrentRow(0)
+
+        def mock_exec(dialog_self):
+            dialog_self.name_edit.setText("number")
+            dialog_self.label_edit.setText("Số hóa đơn mới")
+            dialog_self.patterns_edit.setPlainText("Số:\\s*([A-Z0-9]+)\nInvoice:\\s*([A-Z0-9]+)")
+            dialog_self._accept()
+            return QDialog.DialogCode.Accepted
+
+        monkeypatch.setattr(EditFieldSpecDialog, "exec", mock_exec)
+        editor._edit_field()
+
+        field = editor._draft_fields[0]
+        assert field.name == "number"
+        assert field.label == "Số hóa đơn mới"
+        assert len(field.patterns) == 2
+        assert "Số:" in field.patterns[0]
+
+    def test_them_field_moi_vao_profile(self, editor, monkeypatch):
+        from PySide6.QtWidgets import QDialog
+        from src.ui.rule_editor import EditFieldSpecDialog
+
+        editor.profile_list.setCurrentRow(row_of(editor, "inv"))
+        count_before = len(editor._draft_fields)
+
+        def mock_exec(dialog_self):
+            dialog_self.name_edit.setText("amount")
+            dialog_self.label_edit.setText("Tổng tiền")
+            dialog_self.patterns_edit.setPlainText("Tổng tiền:\\s*([\\d,.]+)")
+            dialog_self.validate_combo.setCurrentIndex(dialog_self.validate_combo.findData("amount"))
+            dialog_self._accept()
+            return QDialog.DialogCode.Accepted
+
+        monkeypatch.setattr(EditFieldSpecDialog, "exec", mock_exec)
+        editor._add_field()
+
+        assert len(editor._draft_fields) == count_before + 1
+        new_field = editor._draft_fields[-1]
+        assert new_field.name == "amount"
+        assert new_field.label == "Tổng tiền"
+        assert new_field.validate == "amount"
+
+    def test_xoa_field_khoi_profile(self, editor, monkeypatch):
+        editor.profile_list.setCurrentRow(row_of(editor, "inv"))
+        count_before = len(editor._draft_fields)
+        assert count_before > 0
+
+        editor.fields_list.setCurrentRow(0)
+        monkeypatch.setattr(
+            QMessageBox, "question", lambda *a, **k: QMessageBox.StandardButton.Yes
+        )
+        editor._remove_field()
+        assert len(editor._draft_fields) == count_before - 1
+
+    def test_luu_profile_ghi_nhan_fields_da_sua(self, editor, store, monkeypatch):
+        from PySide6.QtWidgets import QDialog
+        from src.ui.rule_editor import EditFieldSpecDialog
+
+        monkeypatch.setattr(QMessageBox, "information", lambda *a, **k: None)
+        editor.profile_list.setCurrentRow(row_of(editor, "inv"))
+
+        def mock_exec(dialog_self):
+            dialog_self.name_edit.setText("description")
+            dialog_self.label_edit.setText("Nội dung")
+            dialog_self.patterns_edit.setPlainText("Nội dung\\s+([\\s\\S]+?)(?=\\s*(?:Trạng thái|\\Z))")
+            dialog_self._accept()
+            return QDialog.DialogCode.Accepted
+
+        monkeypatch.setattr(EditFieldSpecDialog, "exec", mock_exec)
+        editor._add_field()
+        editor._save_current()
+
+        saved = store.get("inv")
+        field_names = [f.name for f in saved.fields]
+        assert "description" in field_names

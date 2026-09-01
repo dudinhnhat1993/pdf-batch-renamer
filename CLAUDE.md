@@ -224,3 +224,21 @@ PDF barcode, PDF có password, Excel master data.
     lại mọi `.dll` trong datas thành binary ở thư mục gốc làm bộ DLL bị nhân đôi (+180 MB).
 36. **`pdf-renamer --check`** in chẩn đoán môi trường: dùng khi hỗ trợ người dùng và khi
     kiểm chứng bản build.
+
+## 14. Quyết định sau Phase 4 (2026-08-31)
+
+37. **Xem trước PDF render theo độ phân giải hiển thị.** Trước đây trang được rasterize
+    1 lần ở 200 dpi cố định rồi để `QGraphicsView.scale()` phóng/thu ảnh bitmap đó — nội
+    suy bilinear làm chữ mờ, thấy rõ khi so với phần mềm đọc PDF. Nay `PdfPageView` nhận
+    một *nguồn render* (`set_render_source(cb)`) và mỗi lần zoom / đổi kích thước khung
+    thì rasterize LẠI ở `dpi = zoom × devicePixelRatio × 72`, rồi đặt ma trận view
+    `= zoom / (dpi/72)` để 1 pixel ảnh rơi đúng 1 pixel VẬT LÝ. Kèm theo:
+    - Hoãn 90 ms trước khi render lại; thay đổi < 0,5% thì không rasterize mà HÚT mức
+      zoom về đúng ảnh đang có (`_snap_zoom_to_pixmap`) — vẫn giữ tỉ lệ 1:1 tuyệt đối.
+    - dpi ghi lại là dpi THỰC suy từ bề rộng ảnh nhận được, không phải dpi đã yêu cầu.
+    - Cache ảnh theo `(trang, dpi)`, giữ 6 ảnh gần nhất; xoá sạch khi đổi tài liệu.
+    - Trần `MAX_RENDER_DPI` 600 và trần 40 triệu pixel/trang cho khổ giấy lớn.
+    - `load_page(pixmap, page, dpi)` (đưa sẵn ảnh) giữ nguyên làm đường dự phòng.
+    - Ctrl + lăn chuột = zoom, giống phần mềm đọc PDF.
+    Lớp phủ bbox từng từ vẫn tính theo `self._scale = dpi/72` nên tự khớp sau mỗi lần
+    render lại — có test khoá điều này.

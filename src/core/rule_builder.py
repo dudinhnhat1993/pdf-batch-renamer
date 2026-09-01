@@ -88,9 +88,21 @@ def shape_pattern(value: str) -> str:
 
 
 def describe_shape(value: str) -> str:
-    """Giải thích hình dạng bằng tiếng Việt: '4 chữ in hoa, rồi 7 chữ số'."""
+    """Giải thích hình dạng bằng tiếng Việt ngắn gọn: '4 chữ in hoa, rồi 7 chữ số'."""
+    runs = _runs(value)
+    if len(runs) > 4:
+        has_digits = any(r.kind == "digit" for r in runs)
+        has_letters = any(r.kind in ("upper", "lower") for r in runs)
+        if has_digits and has_letters:
+            return f"chuỗi chữ-số ({len(value)} ký tự)"
+        if has_digits:
+            return f"chuỗi {len(value)} chữ số"
+        if has_letters:
+            return f"chuỗi {len(value)} chữ cái"
+        return f"chuỗi {len(value)} ký tự"
+
     words: list[str] = []
-    for run in _runs(value):
+    for run in runs:
         n = len(run.text)
         if run.kind == "digit":
             words.append(f"{n} chữ số")
@@ -118,13 +130,21 @@ def _line_containing(text: str, value: str) -> tuple[str, str, str]:
 
 
 def guess_label(text: str, value: str, max_words: int = 4) -> str:
-    """Đoán nhãn đứng trước giá trị trên cùng dòng, vd 'B/L No.'."""
-    _, before, _ = _line_containing(text, value)
-    before = before.strip().rstrip(":-#").strip()
-    if not before:
-        return ""
-    words = before.split()
-    return " ".join(words[-max_words:]) if words else ""
+    """Đoán nhãn đứng trước giá trị trên cùng dòng hoặc dòng ngay phía trước, vd 'B/L No.'."""
+    lines = text.splitlines()
+    for i, line in enumerate(lines):
+        idx = line.find(value)
+        if idx >= 0:
+            before = line[:idx].strip().rstrip(":-#").strip()
+            if before:
+                words = before.split()
+                return " ".join(words[-max_words:]) if words else ""
+            if i > 0:
+                prev = lines[i - 1].strip().rstrip(":-#").strip()
+                if prev and len(prev) < 40:
+                    words = prev.split()
+                    return " ".join(words[-max_words:]) if words else ""
+    return ""
 
 
 def label_pattern(label: str, value_pattern: str) -> str:

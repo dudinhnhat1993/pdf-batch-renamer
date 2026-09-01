@@ -6,6 +6,7 @@ và chỉ được lưu khi người dùng xác nhận nếu có field match ké
 
 from __future__ import annotations
 
+import copy
 import logging
 from pathlib import Path
 
@@ -25,10 +26,10 @@ from PySide6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
     QMessageBox,
+    QPlainTextEdit,
     QPushButton,
     QScrollArea,
     QSplitter,
-    QTextEdit,
     QVBoxLayout,
     QWidget,
 )
@@ -37,9 +38,10 @@ from ..core.config import AppConfig
 from ..core.errors import MasterDataError
 from ..core.learning import LearningStore
 from ..core.masterdata import load_table
-from ..core.models import MasterDataLookup, MatchCondition, Profile
+from ..core.models import FieldSpec, MasterDataLookup, MatchCondition, Profile
 from ..core.regression import run_regression
 from ..core.rules import ProfileStore
+from .icons import get_app_icon
 
 logger = logging.getLogger(__name__)
 
@@ -48,37 +50,48 @@ MAX_SAMPLES = 5
 PRIORITY_STEP = 10
 
 
+
+
 class ConditionList(QWidget):
     """Danh sách điều kiện (nhận diện hoặc loại trừ) — thêm bằng cách gõ chữ."""
 
-    def __init__(self, title: str, hint: str = "", parent=None) -> None:
+    def __init__(self, title: str, parent=None) -> None:
         super().__init__(parent)
+        self.setWindowIcon(get_app_icon())
         self.list = QListWidget()
+        self.list.setFixedHeight(115)
         self.input = QLineEdit()
-        self.input.setPlaceholderText("Gõ đoạn chữ xuất hiện trên chứng từ rồi bấm Thêm")
+        self.input.setFixedHeight(30)
+        self.input.setPlaceholderText("Nhập từ khóa hoặc cú pháp regex...")
         self.input.returnPressed.connect(self._add)
         self.kind = QComboBox()
+        self.kind.setFixedHeight(30)
+        self.kind.setFixedWidth(95)
         self.kind.addItem("Chứa chữ", "keyword")
-        self.kind.addItem("Biểu thức (regex)", "regex")
+        self.kind.addItem("Regex", "regex")
 
         add = QPushButton("Thêm")
+        add.setFixedHeight(30)
+        add.setFixedWidth(60)
         add.clicked.connect(self._add)
-        remove = QPushButton("Bỏ")
+        remove = QPushButton("Xóa")
+        remove.setFixedHeight(30)
+        remove.setFixedWidth(50)
         remove.clicked.connect(self._remove)
 
         box = QGroupBox(title)
         layout = QVBoxLayout(box)
         layout.addWidget(self.list)
+        layout.addWidget(self.input)
+
         row = QHBoxLayout()
-        row.addWidget(self.input, 1)
+        row.setSpacing(6)
+        row.setContentsMargins(0, 2, 0, 0)
         row.addWidget(self.kind)
         row.addWidget(add)
         row.addWidget(remove)
+        row.addStretch(1)
         layout.addLayout(row)
-        if hint:
-            label = QLabel(hint)
-            label.setWordWrap(True)
-            layout.addWidget(label)
 
         outer = QVBoxLayout(self)
         outer.setContentsMargins(0, 0, 0, 0)
@@ -111,6 +124,98 @@ class ConditionList(QWidget):
         for item in self.list.selectedItems():
             self.list.takeItem(self.list.row(item))
 
+
+
+class EditFieldSpecDialog(QDialog):
+    """Hộp thoại chỉnh sửa chi tiết 1 FieldSpec (tên, nhãn, regex patterns, validate...)."""
+
+    def __init__(self, spec: FieldSpec | None = None, parent=None) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("Chỉnh sửa Field" if spec and spec.name else "Thêm Field mới")
+        self.resize(600, 520)
+
+        self.spec = copy.deepcopy(spec) if spec else FieldSpec(name="")
+
+        self.name_edit = QLineEdit(self.spec.name)
+        self.name_edit.setPlaceholderText("vd: description, doc_date, invoice_no...")
+        self.label_edit = QLineEdit(self.spec.label)
+        self.label_edit.setPlaceholderText("Tên hiển thị tiếng Việt, vd: Nội dung, Số hóa đơn")
+
+        self.required_check = QCheckBox("Bắt buộc (thiếu field này thì coi như không khớp profile)")
+        self.required_check.setChecked(self.spec.required)
+
+        self.validate_combo = QComboBox()
+        validates = [
+            ("Không kiểm tra (none)", "none"),
+            ("Định dạng ngày (date)", "date"),
+            ("Mã container ISO (container)", "container"),
+            ("Mã số thuế (tax_id)", "tax_id"),
+            ("Số nguyên / float (number)", "number"),
+            ("Số tiền (amount)", "amount"),
+            ("Biểu thức regex riêng (regex)", "regex"),
+        ]
+        for label, val in validates:
+            self.validate_combo.addItem(label, val)
+        idx = self.validate_combo.findData(self.spec.validate)
+        self.validate_combo.setCurrentIndex(max(0, idx))
+
+        self.validate_regex_edit = QLineEdit(self.spec.validate_regex)
+        self.validate_regex_edit.setPlaceholderText("Regex kiểm tra nếu chọn kiểu regex")
+
+        self.from_barcode_check = QCheckBox("Cho phép nhận từ Barcode/QR nếu text không có")
+        self.from_barcode_check.setChecked(self.spec.from_barcode)
+
+        self.normalize_check = QCheckBox("Chuẩn hóa theo từ điển tên công ty")
+        self.normalize_check.setChecked(self.spec.normalize_company)
+
+        self.patterns_edit = QPlainTextEdit()
+        self.patterns_edit.setPlaceholderText(
+            "Mỗi dòng 1 biểu thức Regular Expression (Regex).\n"
+            "App sẽ thử lần lượt từ trên xuống dưới."
+        )
+        self.patterns_edit.setPlainText("\n".join(self.spec.patterns))
+
+        form = QFormLayout()
+        form.addRow("Tên field ({name}):", self.name_edit)
+        form.addRow("Nhãn hiển thị:", self.label_edit)
+        form.addRow(self.required_check)
+        form.addRow("Kiểm tra dữ liệu:", self.validate_combo)
+        form.addRow("Regex kiểm tra:", self.validate_regex_edit)
+        form.addRow(self.from_barcode_check)
+        form.addRow(self.normalize_check)
+
+        layout = QVBoxLayout(self)
+        layout.addLayout(form)
+        layout.addWidget(QLabel("<b>Các biểu thức Regex trích xuất (patterns):</b>"))
+        layout.addWidget(self.patterns_edit, 1)
+
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
+        buttons.button(QDialogButtonBox.StandardButton.Ok).setText("Lưu field")
+        buttons.button(QDialogButtonBox.StandardButton.Cancel).setText("Hủy")
+        buttons.accepted.connect(self._accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+    def _accept(self) -> None:
+        name = self.name_edit.text().strip()
+        if not name:
+            QMessageBox.warning(self, "Thiếu thông tin", "Tên field không được để trống.")
+            return
+        patterns = [p for p in self.patterns_edit.toPlainText().splitlines() if p.strip()]
+        self.spec.name = name
+        self.spec.label = self.label_edit.text().strip() or name
+        self.spec.required = self.required_check.isChecked()
+        self.spec.validate = self.validate_combo.currentData() or "none"
+        self.spec.validate_regex = self.validate_regex_edit.text().strip()
+        self.spec.from_barcode = self.from_barcode_check.isChecked()
+        self.spec.normalize_company = self.normalize_check.isChecked()
+        self.spec.patterns = patterns
+        self.accept()
+
+    def get_field_spec(self) -> FieldSpec:
+        return self.spec
 
 class RuleEditorDialog(QDialog):
     """Cửa sổ quản lý toàn bộ profile."""
@@ -193,8 +298,14 @@ class RuleEditorDialog(QDialog):
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Close
         )
-        buttons.button(QDialogButtonBox.StandardButton.Save).setText("Lưu profile này")
-        buttons.button(QDialogButtonBox.StandardButton.Close).setText("Đóng")
+        save_btn = buttons.button(QDialogButtonBox.StandardButton.Save)
+        save_btn.setText("Lưu profile này")
+        save_btn.setProperty("variant", "primary")
+        save_btn.setMinimumWidth(130)
+        close_btn = buttons.button(QDialogButtonBox.StandardButton.Close)
+        close_btn.setText("Đóng")
+        close_btn.setProperty("variant", "secondary")
+        close_btn.setMinimumWidth(80)
         buttons.accepted.connect(self._save_current)
         buttons.rejected.connect(self.reject)
 
@@ -205,10 +316,29 @@ class RuleEditorDialog(QDialog):
     def _build_detail(self) -> QWidget:
         page = QWidget()
         layout = QVBoxLayout(page)
+        layout.setContentsMargins(10, 10, 10, 10)
+        layout.setSpacing(8)
 
         self.name = QLineEdit()
+        self.name.setFixedHeight(30)
         self.doctype = QLineEdit()
+        self.doctype.setFixedHeight(30)
         self.template = QLineEdit()
+        self.template.setFixedHeight(30)
+        self.output_dir = QLineEdit()
+        self.output_dir.setFixedHeight(30)
+        self.output_dir.setPlaceholderText("Để trống = dùng Thư mục output chung trong Cài đặt")
+        pick_out_btn = QPushButton("Chọn…")
+        pick_out_btn.setFixedHeight(30)
+        pick_out_btn.setFixedWidth(75)
+        pick_out_btn.clicked.connect(self._pick_output_dir)
+        out_row = QWidget()
+        out_layout = QHBoxLayout(out_row)
+        out_layout.setContentsMargins(0, 0, 0, 0)
+        out_layout.setSpacing(6)
+        out_layout.addWidget(self.output_dir, 1)
+        out_layout.addWidget(pick_out_btn)
+
         self.fill_optional = QCheckBox(
             "Điền đủ field tùy chọn (chạy thêm tầng vùng/barcode/metadata cho field còn trống)"
         )
@@ -221,28 +351,51 @@ class RuleEditorDialog(QDialog):
         self.date_formats.setPlaceholderText("dd/mm/yyyy, dd-mm-yyyy, dd/mm/yy")
 
         form = QFormLayout()
+        form.setVerticalSpacing(4)
+        form.setContentsMargins(0, 0, 0, 0)
         form.addRow("Tên:", self.name)
         form.addRow("Mã loại ({doctype}):", self.doctype)
         form.addRow("Mẫu tên file:", self.template)
+        form.addRow("Thư mục đích riêng:", out_row)
         form.addRow("Định dạng ngày:", self.date_formats)
         form.addRow(self.fill_optional)
         form.addRow(self.ai_enabled)
         layout.addLayout(form)
 
         self.conditions = ConditionList("Nhận khi chứng từ CÓ chứa (trúng 1 là đủ)")
-        self.excludes = ConditionList(
-            "Nhưng LOẠI TRỪ nếu chứng từ chứa",
-            "Dùng cho chứng từ chồng lấn — vd Invoice loại trừ “PACKING LIST”. "
-            "Điều kiện loại trừ có quyền phủ quyết, không phụ thuộc thứ tự ưu tiên.",
-        )
+        self.excludes = ConditionList("Nhưng LOẠI TRỪ nếu chứng từ chứa")
         cond_row = QHBoxLayout()
-        cond_row.addWidget(self.conditions)
-        cond_row.addWidget(self.excludes)
-        layout.addLayout(cond_row, 1)
+        cond_row.setSpacing(12)
+        cond_row.addWidget(self.conditions, 1)
+        cond_row.addWidget(self.excludes, 1)
+        layout.addLayout(cond_row)
 
-        self.fields_view = QTextEdit()
-        self.fields_view.setReadOnly(True)
-        self.fields_view.setMaximumHeight(110)
+        hint_exclude = QLabel(
+            "Lưu ý: Điều kiện loại trừ có quyền phủ quyết (ví dụ Invoice loại trừ 'PACKING LIST'), "
+            "không phụ thuộc thứ tự ưu tiên."
+        )
+        hint_exclude.setStyleSheet("color: #64748b; font-size: 11.5px; margin-top: -4px; margin-bottom: 4px;")
+        layout.addWidget(hint_exclude)
+
+        self._draft_fields: list[FieldSpec] = []
+        self.fields_list = QListWidget()
+        self.fields_list.setMinimumHeight(180)
+        self.fields_list.setMaximumHeight(320)
+        self.fields_list.setAlternatingRowColors(True)
+        self.fields_list.itemDoubleClicked.connect(self._on_field_double_clicked)
+
+        add_field_btn = QPushButton("Thêm field…")
+        add_field_btn.clicked.connect(self._add_field)
+        edit_field_btn = QPushButton("Sửa field…")
+        edit_field_btn.clicked.connect(self._edit_field)
+        remove_field_btn = QPushButton("Bỏ field")
+        remove_field_btn.clicked.connect(self._remove_field)
+
+        fields_btn_row = QHBoxLayout()
+        fields_btn_row.addWidget(add_field_btn)
+        fields_btn_row.addWidget(edit_field_btn)
+        fields_btn_row.addWidget(remove_field_btn)
+        fields_btn_row.addStretch(1)
 
         self.samples = QListWidget()
         self.samples.setMaximumHeight(110)
@@ -274,11 +427,12 @@ class RuleEditorDialog(QDialog):
         bottom.addWidget(sample_box)
         bottom.addWidget(version_box)
 
-        fields_box = QGroupBox("Field của profile (sửa chi tiết trong Rule Builder)")
-        fields_layout = QVBoxLayout(fields_box)
-        fields_layout.addWidget(self.fields_view)
+        self.fields_box = QGroupBox("Field của profile (nhấp đúp hoặc bấm Sửa để chỉnh regex)")
+        fields_layout = QVBoxLayout(self.fields_box)
+        fields_layout.addWidget(self.fields_list)
+        fields_layout.addLayout(fields_btn_row)
 
-        layout.addWidget(fields_box)
+        layout.addWidget(self.fields_box)
         layout.addWidget(self._build_masterdata())
         layout.addLayout(bottom)
         return page
@@ -343,7 +497,7 @@ class RuleEditorDialog(QDialog):
         for profile in self.profiles:
             matched = stats.get(profile.id, 0)
             item = QListWidgetItem(
-                f"{profile.name}  ·  v{profile.version}  ·  {matched} file/30 ngày"
+                f"{profile.name}  ·  v{profile.version}  ·  {matched} file đã xử lý (30 ngày)"
             )
             item.setData(Qt.ItemDataRole.UserRole, profile.id)
             item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
@@ -413,27 +567,15 @@ class RuleEditorDialog(QDialog):
         self.name.setText(profile.name)
         self.doctype.setText(profile.doctype)
         self.template.setText(profile.template)
+        self.output_dir.setText(getattr(profile, "output_dir", "") or "")
         self.date_formats.setText(", ".join(profile.date_formats))
         self.fill_optional.setChecked(profile.fill_optional_fields)
         self.ai_enabled.setChecked(profile.ai_enabled)
         self.conditions.set_conditions(profile.conditions)
         self.excludes.set_conditions(profile.exclude_conditions)
 
-        lines = []
-        for spec in profile.fields:
-            bits = [f"<b>{spec.label}</b> ({spec.name})"]
-            if spec.required:
-                bits.append("bắt buộc")
-            if spec.zone is not None:
-                bits.append(f"vùng trang {spec.zone.page + 1}")
-            if spec.patterns:
-                bits.append(f"{len(spec.patterns)} cách tìm")
-            if spec.from_barcode:
-                bits.append("nhận từ barcode")
-            if spec.validate != "none":
-                bits.append(f"kiểm tra: {spec.validate}")
-            lines.append(" · ".join(bits))
-        self.fields_view.setHtml("<br>".join(lines) or "Chưa có field nào.")
+        self._draft_fields = profile.fields
+        self._reload_fields_list()
 
         self.samples.clear()
         for path in profile.samples:
@@ -453,6 +595,96 @@ class RuleEditorDialog(QDialog):
             )
             item.setData(Qt.ItemDataRole.UserRole, version)
             self.versions.addItem(item)
+
+
+    # ------------------------------------------------------------- thao tác field
+
+    def _reload_fields_list(self) -> None:
+        self.fields_list.clear()
+        count = len(self._draft_fields)
+        if hasattr(self, "fields_box"):
+            self.fields_box.setTitle(
+                f"Field của profile ({count} trường trích xuất) — nhấp đúp hoặc bấm Sửa để chỉnh regex"
+            )
+        for spec in self._draft_fields:
+            req_tag = "[BẮT BUỘC]" if spec.required else "[Tùy chọn]"
+            bits = [f"{spec.label or spec.name} ({spec.name})", req_tag]
+            if spec.zone is not None:
+                bits.append(f"vùng trang {spec.zone.page + 1}")
+            if spec.patterns:
+                bits.append(f"{len(spec.patterns)} mẫu regex")
+            if spec.from_barcode:
+                bits.append("nhận từ barcode")
+            if spec.validate != "none":
+                bits.append(f"kiểm tra: {spec.validate}")
+            item = QListWidgetItem("   ·   ".join(bits))
+            item.setData(Qt.ItemDataRole.UserRole, spec)
+            item.setToolTip(
+                f"Tên field: {spec.name}\nNhãn hiển thị: {spec.label or spec.name}\n"
+                f"Bắt buộc: {'Có' if spec.required else 'Không'}\n"
+                f"Kiểm tra: {spec.validate}\n"
+                f"Số mẫu Regex: {len(spec.patterns)}"
+            )
+            self.fields_list.addItem(item)
+
+    def _on_field_double_clicked(self, _item: QListWidgetItem) -> None:
+        self._edit_field()
+
+    def _edit_field(self) -> None:
+        row = self.fields_list.currentRow()
+        if row < 0 or row >= len(self._draft_fields):
+            return
+        spec = self._draft_fields[row]
+        dialog = EditFieldSpecDialog(spec, self)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            self._draft_fields[row] = dialog.get_field_spec()
+            self._reload_fields_list()
+            self.fields_list.setCurrentRow(row)
+            self._refresh_masterdata_field_choices()
+
+    def _add_field(self) -> None:
+        dialog = EditFieldSpecDialog(None, self)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            new_spec = dialog.get_field_spec()
+            self._draft_fields.append(new_spec)
+            self._reload_fields_list()
+            self.fields_list.setCurrentRow(len(self._draft_fields) - 1)
+            self._refresh_masterdata_field_choices()
+
+    def _remove_field(self) -> None:
+        row = self.fields_list.currentRow()
+        if row < 0 or row >= len(self._draft_fields):
+            return
+        spec = self._draft_fields[row]
+        ans = QMessageBox.question(
+            self,
+            "Xóa field",
+            f"Bạn có chắc muốn xóa field “{spec.label or spec.name}”?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
+        if ans == QMessageBox.StandardButton.Yes:
+            del self._draft_fields[row]
+            self._reload_fields_list()
+            self._refresh_masterdata_field_choices()
+
+    def _refresh_masterdata_field_choices(self) -> None:
+        current_data = self.md_field.currentData() or ""
+        self._loading_md = True
+        self.md_field.clear()
+        for spec in self._draft_fields:
+            self.md_field.addItem(spec.label or spec.name, spec.name)
+            if spec.name not in self._md_cache:
+                self._md_cache[spec.name] = (
+                    MasterDataLookup.from_dict(spec.masterdata.to_dict())
+                    if spec.masterdata
+                    else MasterDataLookup()
+                )
+        self._loading_md = False
+        idx = self.md_field.findData(current_data)
+        if idx >= 0:
+            self.md_field.setCurrentIndex(idx)
+        elif self.md_field.count() > 0:
+            self.md_field.setCurrentIndex(0)
 
     # -------------------------------------------------------- master data
 
@@ -503,6 +735,11 @@ class RuleEditorDialog(QDialog):
         self._capture_masterdata(self._md_current)
         self._md_current = self.md_field.currentData() or ""
         self._show_masterdata(self._md_current)
+
+    def _pick_output_dir(self) -> None:
+        path = QFileDialog.getExistingDirectory(self, "Chọn thư mục đích riêng cho profile", self.output_dir.text())
+        if path:
+            self.output_dir.setText(path)
 
     def _pick_masterdata(self) -> None:
         path, _ = QFileDialog.getOpenFileName(
@@ -644,6 +881,7 @@ class RuleEditorDialog(QDialog):
         draft.name = self.name.text().strip() or profile.name
         draft.doctype = self.doctype.text().strip() or draft.name
         draft.template = self.template.text().strip() or profile.template
+        draft.output_dir = self.output_dir.text().strip()
         formats = [f.strip() for f in self.date_formats.text().split(",") if f.strip()]
         draft.date_formats = formats or profile.date_formats
         draft.fill_optional_fields = self.fill_optional.isChecked()
@@ -654,6 +892,9 @@ class RuleEditorDialog(QDialog):
             self.samples.item(i).data(Qt.ItemDataRole.UserRole)
             for i in range(self.samples.count())
         ]
+
+        # Cập nhật danh sách fields đã chỉnh sửa
+        draft.fields = [copy.deepcopy(f) for f in self._draft_fields]
 
         # Khai báo tra cứu Excel: chỉ giữ khai báo đủ 3 phần, còn lại coi như không dùng
         self._capture_masterdata()

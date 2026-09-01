@@ -21,7 +21,12 @@ VARIANT = os.environ.get("PDFBR_VARIANT", "lite")
 ROOT = Path(os.environ.get("PDFBR_ROOT", os.getcwd()))
 TESSERACT_STAGE = ROOT / "build" / "tesseract-portable"
 
-datas = [(str(ROOT / "assets"), "assets")]
+datas = [
+    (str(ROOT / "assets"), "assets"),
+    (str(ROOT / "design"), "design"),
+    (str(ROOT / "src" / "ui" / "styles"), "src/ui/styles"),
+    (str(ROOT / "src" / "ui" / "assets"), "src/ui/assets"),
+]
 binaries = []
 hiddenimports = [
     # keyring nạp backend bằng entry point -> PyInstaller không tự thấy
@@ -76,7 +81,7 @@ gui_exe = EXE(
     exclude_binaries=True,
     name="PDFBatchRenamer",
     console=False,  # GUI: không kèm cửa sổ đen
-    icon=None,
+    icon=str(ROOT / 'assets' / 'icon.ico'),
 )
 
 cli_exe = EXE(
@@ -86,7 +91,7 @@ cli_exe = EXE(
     exclude_binaries=True,
     name="pdf-renamer",
     console=True,  # CLI: cần console để n8n đọc output và exit code
-    icon=None,
+    icon=str(ROOT / 'assets' / 'icon.ico'),
 )
 
 COLLECT(

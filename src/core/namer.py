@@ -44,10 +44,11 @@ def strip_accents(text: str) -> str:
 def sanitize(name: str, *, remove_accents: bool = False) -> str:
     """Bỏ ký tự cấm và ký tự điều khiển, gom khoảng trắng."""
     text = FORBIDDEN_RE.sub("", name or "")
+    text = re.sub(r"\s+", " ", text)
     text = CONTROL_RE.sub("", text)
     if remove_accents:
         text = strip_accents(text)
-    text = re.sub(r"\s+", " ", text).strip()
+    text = text.strip()
     # Windows không cho tên kết thúc bằng dấu chấm hoặc khoảng trắng
     return text.rstrip(". ")
 

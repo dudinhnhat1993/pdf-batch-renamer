@@ -221,6 +221,7 @@ class Profile:
     version: int = 1
     samples: list[str] = field(default_factory=list)  # tối đa 5 file mẫu cho regression
     is_fallback: bool = False  # profile "Chung", chỉ dùng khi không cái nào khác match
+    output_dir: str = ""  # Thư mục đích riêng (rỗng = dùng config.output_root)
 
     def __post_init__(self) -> None:
         if not self.id:
@@ -253,6 +254,7 @@ class Profile:
             "version": self.version,
             "samples": list(self.samples),
             "is_fallback": self.is_fallback,
+            "output_dir": self.output_dir,
         }
 
     @classmethod

@@ -11,7 +11,8 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 pytest.importorskip("PySide6")
 
-from PySide6.QtCore import Qt  # noqa: E402
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QMessageBox, QTextBrowser  # noqa: E402
 from src.core.bootstrap import build_context  # noqa: E402
 from src.core.models import ExtractedField, FileJob, JobStatus, Layer, PageText, Word  # noqa: E402
 from src.core.pipeline import Pipeline  # noqa: E402
@@ -249,7 +250,6 @@ class TestRuleBuilderWizard:
             ctx.close()
 
     def test_luu_profile_va_ghi_lai_file_mau(self, qapp, isolated_home, pdfs, monkeypatch):
-        from PySide6.QtWidgets import QMessageBox
 
         monkeypatch.setattr(QMessageBox, "information", lambda *a, **k: None)
         ctx = build_context()
@@ -274,7 +274,6 @@ class TestRuleBuilderWizard:
             ctx.close()
 
     def test_khong_cho_luu_profile_khong_co_field(self, qapp, isolated_home, pdfs, monkeypatch):
-        from PySide6.QtWidgets import QMessageBox
 
         warned = []
         monkeypatch.setattr(QMessageBox, "warning", lambda *a, **k: warned.append(a))
@@ -314,7 +313,6 @@ class TestSettingsDialog:
         assert config.mode == "move"
 
     def test_khong_luu_khi_thieu_output(self, qapp, config, bundled_profiles, monkeypatch):
-        from PySide6.QtWidgets import QMessageBox
 
         warned = []
         monkeypatch.setattr(QMessageBox, "warning", lambda *a, **k: warned.append(a))
@@ -365,7 +363,8 @@ class TestMainWindow:
         window = self._window(ctx)
         try:
             window._add_paths([folder])
-            assert "2 file PDF" in window.counts.text()
+            assert "tổng 2" in window.counts.text() or "2 file PDF" in window.counts.text()
+            assert window.preview_model.rowCount() == 2
         finally:
             window.close()
             ctx.close()
@@ -375,7 +374,6 @@ class TestMainWindow:
     ):
         import shutil
 
-        from PySide6.QtWidgets import QMessageBox
 
         # Sau khi sửa field, app hỏi "Tạo rule từ chỉnh sửa này?" — ở đây trả lời Không
         monkeypatch.setattr(
@@ -443,3 +441,230 @@ class TestMainWindow:
         finally:
             window.close()
             ctx.close()
+
+    def test_settings_dialog_presets(self, qapp, monkeypatch):
+        import src.ui.settings_dialog as sd
+        monkeypatch.setattr(sd.QMessageBox, "information", lambda *a, **k: None)
+
+        from src.core.config import AppConfig
+        dlg = SettingsDialog(AppConfig(), [])
+
+        # Áp dụng preset Siêu tốc
+        dlg._apply_quick_preset("fast")
+        assert dlg.ocr_enabled.isChecked() is False
+        assert dlg.barcode_enabled.isChecked() is False
+        assert dlg.workers.value() == 6
+
+        # Áp dụng preset Quét sâu
+        dlg._apply_quick_preset("deep")
+        assert dlg.ocr_enabled.isChecked() is True
+        assert dlg.ocr_max_pages.value() == 5
+        assert dlg.barcode_enabled.isChecked() is True
+
+        # Áp dụng preset Mặc định chuẩn
+        dlg._apply_quick_preset("default")
+        assert dlg.ocr_enabled.isChecked() is True
+        assert dlg.ocr_max_pages.value() == 3
+        assert dlg.subfolder_enabled.isChecked() is True
+        dlg.close()
+
+    def test_quick_guide_dialog(self, qapp, isolated_home, output_root):
+        from src.ui.main_window import QuickGuideDialog
+        from PySide6.QtWidgets import QLabel
+        ctx = build_context()
+        ctx.config.output_root = str(output_root)
+        window = self._window(ctx)
+        try:
+            guide = QuickGuideDialog(window)
+            assert "PDF Batch Renamer" in guide.windowTitle()
+            labels = guide.findChildren(QLabel)
+            all_text = " ".join(l.text() for l in labels if l.text())
+            assert "BƯỚC 1" in all_text or "BUOC 1" in all_text
+            assert "BƯỚC 2" in all_text or "BUOC 2" in all_text
+            assert "BƯỚC 3" in all_text or "BUOC 3" in all_text
+        finally:
+            window.close()
+            ctx.close()
+
+    def test_open_in_explorer_and_links(self, qapp, isolated_home, output_root, tmp_path, monkeypatch):
+        from src.ui.qt_helpers import open_in_explorer
+        opened = []
+        monkeypatch.setattr("os.startfile", lambda p: opened.append(str(p)))
+
+        test_dir = tmp_path / "test_dir"
+        test_dir.mkdir()
+        test_file = test_dir / "sample.pdf"
+        test_file.write_bytes(b"%PDF-1.4")
+
+        assert open_in_explorer(test_file) is True
+        assert opened and opened[-1] == str(test_file)
+
+        assert open_in_explorer(test_dir) is True
+        assert opened and opened[-1] == str(test_dir)
+
+        # File không tồn tại nhưng thư mục cha tồn tại
+        non_exist = test_dir / "not_exist.pdf"
+        assert open_in_explorer(non_exist) is True
+        assert opened and opened[-1] == str(test_dir)
+
+        # Cả thư mục lẫn file đều không tồn tại
+        assert open_in_explorer(tmp_path / "fake" / "fake.pdf") is False
+
+    def test_main_window_double_click_and_detail_links(self, qapp, isolated_home, output_root, tmp_path, monkeypatch):
+        opened = []
+        monkeypatch.setattr("os.startfile", lambda p: opened.append(str(p)))
+
+        ctx = build_context()
+        ctx.config.output_root = str(output_root)
+        window = self._window(ctx)
+        try:
+            job = make_job(tmp_path)
+            dest_dir = tmp_path / "out"
+            dest_dir.mkdir(parents=True, exist_ok=True)
+            dest_file = dest_dir / job.new_name
+            dest_file.write_bytes(b"%PDF-1.4")
+            job.dest_dir = dest_dir
+
+            window.preview_model.set_jobs([job])
+            window.table.selectRow(0)
+
+            # Double click cột Thư mục đích (COL_DEST = 3)
+            idx_dest = window.preview_model.index(0, 3)
+            window._on_table_double_clicked(idx_dest)
+            assert str(dest_dir) in opened
+
+            # Double click cột Tên mới (COL_NEW = 2)
+            idx_new = window.preview_model.index(0, 2)
+            window._on_table_double_clicked(idx_new)
+            assert str(dest_file) in opened
+
+            # Double click cột Tên cũ (COL_OLD = 1)
+            idx_old = window.preview_model.index(0, 1)
+            window._on_table_double_clicked(idx_old)
+            assert str(job.source) in opened
+
+            # Click link trong detail panel
+            window._on_detail_link_clicked("dest_file")
+            assert str(dest_file) in opened
+
+            window._on_detail_link_clicked("source")
+            assert str(job.source) in opened
+
+            window._on_detail_link_clicked("dest_dir")
+            assert str(dest_dir) in opened
+
+            # Xóa job khỏi bảng
+            window._remove_job_at(0)
+            assert len(window.preview_model.jobs) == 0
+        finally:
+            window.close()
+            ctx.close()
+
+    def test_menubar_structure_and_toolbar(self, qapp, isolated_home, output_root):
+        ctx = build_context()
+        ctx.config.output_root = str(output_root)
+        window = self._window(ctx)
+        try:
+            # Menu bar ẩn để tránh thừa hàng
+            assert window.menuBar().isVisible() is False
+
+            # Kiểm tra các action chính có icon và gắn đúng phím tắt
+            assert not window.act_files.icon().isNull()
+            assert not window.act_scan.icon().isNull()
+            assert not window.act_apply.icon().isNull()
+            assert not window.act_settings.icon().isNull()
+            assert not window.act_guide.icon().isNull()
+
+            assert window.act_files.shortcut().toString() == "Ctrl+O"
+            assert window.act_scan.shortcut().toString() == "F5"
+            assert window.act_apply.shortcut().toString() == "Ctrl+Return"
+            assert window.act_undo.shortcut().toString() == "Ctrl+Z"
+            assert window.act_settings.shortcut().toString() == "F10"
+            assert window.act_guide.shortcut().toString() == "F1"
+
+            # Window icon đã được thiết lập
+            assert not window.windowIcon().isNull()
+        finally:
+            window.close()
+            ctx.close()
+
+    def test_pdf_viewer_widget_and_preview_dock(self, qapp, isolated_home, output_root, tmp_path, pdfs):
+        from src.ui.pdf_view import PdfViewerWidget
+
+        viewer = PdfViewerWidget()
+        try:
+            # Khi chưa nạp file
+            assert viewer.file_name_label.text() == "Chưa chọn file"
+            assert viewer.page_label.text() == "0 / 0"
+
+            # Nạp file PDF mẫu
+            viewer.load_file(pdfs["invoice"])
+            assert viewer._total_pages > 0
+            assert viewer.page_label.text().startswith("1 /")
+
+            # Chuyển trang và zoom
+            viewer._next_page()
+            viewer._prev_page()
+            viewer.view.zoom(1.2)
+            viewer.view.fit_width()
+
+            # Clear
+            viewer.clear()
+            assert viewer.file_name_label.text() == "Chưa chọn file"
+        finally:
+            viewer.close_document()
+            viewer.close()
+
+    def test_main_window_pdf_preview_integration(self, qapp, isolated_home, output_root, tmp_path, pdfs):
+        ctx = build_context()
+        ctx.config.output_root = str(output_root)
+        window = self._window(ctx)
+        try:
+            window.show()
+            assert window.preview_dock is not None
+            assert window.pdf_viewer is not None
+            assert not window.act_toggle_preview.icon().isNull()
+
+            # Toggle dock
+            window.act_toggle_preview.setChecked(False)
+            assert window.preview_dock.isHidden()
+            window.act_toggle_preview.setChecked(True)
+            assert not window.preview_dock.isHidden()
+
+            # Chọn dòng có file PDF
+            job = make_job(tmp_path)
+            job.source = pdfs["invoice"]
+            window.preview_model.set_jobs([job])
+            window.table.selectRow(0)
+
+            assert window.pdf_viewer._current_path == pdfs["invoice"]
+            assert window.pdf_viewer._total_pages > 0
+        finally:
+            window.close()
+            ctx.close()
+
+    def test_pdf_page_view_ctrl_multi_selection(self, qapp, isolated_home, output_root, tmp_path, pdfs):
+        from src.core.models import PageText, Word
+        from src.ui.pdf_view import PdfPageView
+
+        view = PdfPageView()
+        # Giả lập 2 dòng từ
+        words = [
+            Word("HAI", 10.0, 20.0, 30.0, 30.0),
+            Word("ANH", 35.0, 20.0, 55.0, 30.0),
+            Word("BK/0687", 10.0, 40.0, 50.0, 50.0),
+            Word("T07.26", 55.0, 40.0, 85.0, 50.0),
+        ]
+        page = PageText(index=0, width=200.0, height=200.0, words=words)
+        from PySide6.QtGui import QPixmap
+        pix = QPixmap(400, 400)
+        view.load_page(pix, page, dpi=200)
+
+        # Chọn dòng 1
+        view._selection = [words[0], words[1]]
+        assert view.selected_text() == "HAI ANH"
+
+        # Giữ Ctrl và chọn thêm dòng 2
+        combined = view._sort_words(view._selection + [words[2], words[3]])
+        view._selection = combined
+        assert view.selected_text() == "HAI ANH BK/0687 T07.26"

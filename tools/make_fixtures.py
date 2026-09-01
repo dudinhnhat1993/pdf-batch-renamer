@@ -105,6 +105,23 @@ BARCODE_LINES = [
 # Số container hợp lệ theo ISO 6346 (check digit đúng) — dùng cho test barcode
 BARCODE_CONTAINER = "MSKU2482484"
 
+BANK_TRANSFER_LINES = [
+    "10:21 17/7/26 VietinBank iPay",
+    "1900 558 868",
+    "contact@vietinbank.vn",
+    "Chi tiet giao dich",
+    "So tham chieu: 946C60716DK7PDT7",
+    "Tai khoan nguon 106884718912 - TRAN THI THANH - Tai khoan thanh toan",
+    "So tien -786,500 VND Bay tram tam muoi sau nghin nam tram dong",
+    "Tai khoan dich 7229707 TRUONG TRAN TRAN",
+    "Ngan hang TMCP A Chau",
+    "Noi dung 946C60716DK7PDT7 6197ICBVC2A4YP8C TAM CK PKT",
+    "YE2607006 T04.26",
+    "Trang thai Thanh cong",
+    "Kenh giao dich 78 - Retail Internet Banking",
+    "Thoi gian 16-07-2026 22:23:43",
+]
+
 
 # ------------------------------------------------------------------ PDF text
 
@@ -143,6 +160,18 @@ def make_packing_list_pdf(path: Path) -> Path:
 def make_unknown_pdf(path: Path) -> Path:
     """Chứng từ không khớp profile nào -> rơi vào profile Chung."""
     return _text_pdf(path, ["MEMO", "", "Noi dung khong phai chung tu logistics."], title="Memo")
+
+
+def make_bank_transfer_pdf(path: Path) -> Path:
+    """Tạo hoặc sao chép fixture test-2.pdf (chứng từ chuyển khoản VietinBank iPay)."""
+    import shutil
+    fixture_real = Path(__file__).resolve().parent.parent / "tests" / "fixtures" / "test-2.pdf"
+    if fixture_real.exists():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(fixture_real, path)
+        return path
+    return _text_pdf(path, BANK_TRANSFER_LINES, title="VietinBank iPay test-2")
+
 
 
 # ---------------------------------------------------------------- PDF scan
@@ -254,6 +283,7 @@ def generate_all(directory: Path | str) -> dict[str, Path]:
         "barcode": make_barcode_pdf(d / "bl_barcode.pdf"),
         "encrypted": make_encrypted_pdf(d / "invoice_encrypted.pdf"),
         "masterdata": make_masterdata_xlsx(d / "masterdata.xlsx"),
+        "bank_transfer": make_bank_transfer_pdf(d / "test-2.pdf"),
     }
 
 

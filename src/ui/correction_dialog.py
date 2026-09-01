@@ -33,6 +33,7 @@ from ..core.rule_builder import generate_candidates, zone_from_bbox
 from ..core.rules import ProfileStore, run_regex_field
 from ..core.textloc import find_word_span
 from ..core.zonal import text_in_zone
+from .icons import get_app_icon
 
 logger = logging.getLogger(__name__)
 
@@ -70,6 +71,8 @@ def propose_zone(document: DocumentText, value: str) -> tuple[Zone, str] | None:
     return None
 
 
+
+
 class CorrectionRuleDialog(QDialog):
     """Đề xuất rule từ 1 lần sửa tay. Không có đường nào tự lưu — phải bấm Duyệt."""
 
@@ -84,6 +87,7 @@ class CorrectionRuleDialog(QDialog):
         parent=None,
     ) -> None:
         super().__init__(parent)
+        self.setWindowIcon(get_app_icon())
         self.setWindowTitle("Tạo rule từ chỉnh sửa này?")
         self.resize(760, 620)
         self.config = config

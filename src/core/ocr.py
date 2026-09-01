@@ -194,6 +194,21 @@ class OcrEngine:
                 import pytesseract
 
                 pytesseract.pytesseract.tesseract_cmd = self.exe
+                if sys.platform.startswith("win"):
+                    try:
+                        import subprocess
+
+                        if hasattr(pytesseract.pytesseract, "subprocess_args"):
+                            _orig = pytesseract.pytesseract.subprocess_args
+
+                            def _safe_win_subprocess_args():
+                                args = _orig() if callable(_orig) else {}
+                                args["creationflags"] = subprocess.CREATE_NO_WINDOW
+                                return args
+
+                            pytesseract.pytesseract.subprocess_args = _safe_win_subprocess_args
+                    except Exception:
+                        pass
                 self._pytesseract = pytesseract
             except ImportError as exc:  # pragma: no cover - môi trường thiếu gói
                 logger.error("Không import được pytesseract: %s", exc)
@@ -210,9 +225,19 @@ class OcrEngine:
         return self._pytesseract is not None
 
     def available_languages(self) -> list[str]:
-        """Danh sách gói ngôn ngữ đang dùng được — Settings hiển thị để user tự kiểm tra."""
+        """Danh sách gói ngôn ngữ đang dùng được — đọc trực tiếp file traineddata, không spawn tiến trình."""
         if not self.available:
             return []
+        langs = set()
+        if self.tessdata and Path(self.tessdata).is_dir():
+            for p in Path(self.tessdata).glob("*.traineddata"):
+                langs.add(p.stem)
+        bundled = bundled_tessdata_of(self.exe)
+        if bundled and bundled.is_dir():
+            for p in bundled.glob("*.traineddata"):
+                langs.add(p.stem)
+        if langs:
+            return sorted(langs)
         try:
             return sorted(self._pytesseract.get_languages(config=""))
         except Exception as exc:
