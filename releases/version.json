@@ -9,12 +9,12 @@
     "Huong dan su dung HD 100% Tieng Viet co dau"
   ],
   "installer": {
-    "url": "https://github.com/dinhnhat7993/pdf-batch-renamer/releases/download/v1.0.3/PDFBatchRenamer-Setup-v1.0.3.exe",
+    "url": "https://github.com/dudinhnhat1993/pdf-batch-renamer/releases/download/v1.0.3/PDFBatchRenamer-Setup-v1.0.3.exe",
     "sha256": "8c241afbb11f9152b6fda576043fffaa125abf40f9c61022ebabee5c93af834e",
     "size_bytes": 112469796
   },
   "portable": {
-    "url": "https://github.com/dinhnhat7993/pdf-batch-renamer/releases/download/v1.0.3/PDFBatchRenamer-v1.0.3-Portable.zip",
+    "url": "https://github.com/dudinhnhat1993/pdf-batch-renamer/releases/download/v1.0.3/PDFBatchRenamer-v1.0.3-Portable.zip",
     "sha256": "baa76011f76578d10341463eab6db4ee8b609bac2b05de344dfb83059528cab4",
     "size_bytes": 171255350
   },

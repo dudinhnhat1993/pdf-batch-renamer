@@ -50,7 +50,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Phat hanh phien ban moi cho PDF Batch Renamer")
     parser.add_argument("--version", required=True, help="So phien ban moi (VD: 1.0.0)")
     parser.add_argument("--notes", nargs="+", help="Danh sach ghi chu cap nhat / Changelog")
-    parser.add_argument("--url-base", default="https://github.com/dinhnhat7993/pdf-batch-renamer/releases/download", help="Base URL tai file")
+    parser.add_argument("--url-base", default="https://github.com/dudinhnhat1993/pdf-batch-renamer/releases/download", help="Base URL tai file")
     args = parser.parse_args()
 
     new_ver = args.version.lstrip("v")

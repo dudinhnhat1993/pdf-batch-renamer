@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 # URL mặc định của file version.json
 DEFAULT_UPDATE_URL = (
-    "https://raw.githubusercontent.com/dinhnhat7993/pdf-batch-renamer/main/releases/version.json"
+    "https://raw.githubusercontent.com/dudinhnhat1993/pdf-batch-renamer/main/releases/version.json"
 )
 
 
