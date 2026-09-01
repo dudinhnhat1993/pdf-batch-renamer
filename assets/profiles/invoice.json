@@ -1,0 +1,87 @@
+{
+  "id": "invoice",
+  "name": "Invoice",
+  "doctype": "INV",
+  "enabled": true,
+  "priority": 20,
+  "condition_mode": "any",
+  "conditions": [
+    {
+      "kind": "keyword",
+      "value": "COMMERCIAL INVOICE",
+      "case_sensitive": false
+    },
+    {
+      "kind": "keyword",
+      "value": "INVOICE NO",
+      "case_sensitive": false
+    },
+    {
+      "kind": "regex",
+      "value": "\\bINVOICE\\b",
+      "case_sensitive": false
+    }
+  ],
+  "exclude_conditions": [
+    {
+      "kind": "keyword",
+      "value": "PACKING LIST",
+      "case_sensitive": false
+    },
+    {
+      "kind": "keyword",
+      "value": "BILL OF LADING",
+      "case_sensitive": false
+    }
+  ],
+  "fields": [
+    {
+      "name": "number",
+      "label": "Số hóa đơn",
+      "required": true,
+      "patterns": [
+        "Invoice\\s*(?:No|Number|#)\\.?\\s*[:\\-]?\\s*([A-Z0-9][A-Z0-9\\-/._]*)",
+        "INV\\s*(?:No)?\\.?\\s*[:\\-]?\\s*([A-Z0-9][A-Z0-9\\-/._]*)",
+        "S\\u1ed1\\s*h\\u00f3a\\s*\\u0111\\u01a1n\\s*[:\\-]?\\s*([A-Z0-9][A-Z0-9\\-/._]*)"
+      ],
+      "validate": "regex",
+      "validate_regex": "^[A-Z0-9][A-Z0-9\\-/._]{1,29}$"
+    },
+    {
+      "name": "doc_date",
+      "label": "Ngày hóa đơn",
+      "required": true,
+      "patterns": [
+        "Invoice\\s*Date\\s*[:\\-]?\\s*(\\d{1,2}[/\\-.]\\d{1,2}[/\\-.]\\d{2,4})",
+        "Date\\s*[:\\-]?\\s*(\\d{1,2}[/\\-.]\\d{1,2}[/\\-.]\\d{2,4})",
+        "Ng\\u00e0y\\s*[:\\-]?\\s*(\\d{1,2}[/\\-.]\\d{1,2}[/\\-.]\\d{2,4})"
+      ],
+      "validate": "date"
+    },
+    {
+      "name": "company",
+      "label": "Người bán",
+      "required": false,
+      "patterns": [
+        "(?:Seller|Supplier|Beneficiary|Exporter)\\s*[:\\-]?\\s*([^\\n]{2,60})",
+        "(?:Shipper)\\s*[:\\-]?\\s*([^\\n]{2,60})"
+      ],
+      "normalize_company": true
+    }
+  ],
+  "date_formats": [
+    "dd/mm/yyyy",
+    "dd-mm-yyyy",
+    "dd.mm.yyyy",
+    "yyyy-MM-dd",
+    "dd/mm/yy",
+    "dd-mm-yy",
+    "dd.mm.yy"
+  ],
+  "template": "{doc_date}_{doctype}_{number}_{company}",
+  "ai_enabled": false,
+  "version": 1,
+  "samples": [],
+  "is_fallback": false,
+  "fill_optional_fields": true
+}

@@ -1,0 +1,65 @@
+name: Release Build & Publish
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g. 1.0.4)'
+        required: true
+        default: '1.0.4'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Build Installer & Portable Release
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Inno Setup
+        run: choco install innosetup --no-progress -y
+
+      - name: Install Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller pytest pytest-qt
+
+      - name: Run Test Suite
+        run: |
+          pytest tests/ -q
+
+      - name: Build Release Artifacts
+        shell: pwsh
+        run: |
+          $ver = "${{ github.ref_name }}".TrimStart('v')
+          if ([string]::IsNullOrWhiteSpace($ver) -or $ver -eq "main") {
+            $ver = "${{ github.event.inputs.version }}"
+          }
+          python tools/publish_release.py --version $ver --notes "Tu dong phat hanh boi GitHub Actions CI/CD"
+
+      - name: Upload Release Binaries to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/installer/*.exe
+            dist/*-Portable.zip
+            dist/version.json
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

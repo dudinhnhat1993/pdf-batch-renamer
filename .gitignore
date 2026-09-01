@@ -1,0 +1,28 @@
+# Môi trường và bộ nhớ tạm
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# Kết quả đóng gói (dựng lại bằng tools/build.py)
+build/
+dist/
+
+# Fixture sinh tự động và file PDF dữ liệu
+tests/fixtures/generated/
+*.pdf
+tests/fixtures/*.pdf
+
+# Tài liệu cấu hình AI nội bộ / Thiết kế riêng
+CLAUDE.md
+ANTIGRAVITY_PROJECT_BRIEF.md
+Giao diện ứng dụng 6 màn hình/
+*.tmp
+*.log
+
+# Rác của Windows / trình soạn thảo
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/

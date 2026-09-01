@@ -1,0 +1,22 @@
+{
+  "version": "1.0.3",
+  "release_date": "2026-09-01",
+  "min_supported_version": "1.0.0",
+  "title": "Ban phat hanh PDF Batch Renamer v1.0.3",
+  "changelog": [
+    "Cau hinh Auto-Update qua GitHub Releases dinhnhat7993/pdf-batch-renamer",
+    "Mo rong khung danh sach Field trong Quan ly Rule show day du moi truong",
+    "Huong dan su dung HD 100% Tieng Viet co dau"
+  ],
+  "installer": {
+    "url": "https://github.com/dudinhnhat1993/pdf-batch-renamer/releases/download/v1.0.3/PDFBatchRenamer-Setup-v1.0.3.exe",
+    "sha256": "8c241afbb11f9152b6fda576043fffaa125abf40f9c61022ebabee5c93af834e",
+    "size_bytes": 112469796
+  },
+  "portable": {
+    "url": "https://github.com/dudinhnhat1993/pdf-batch-renamer/releases/download/v1.0.3/PDFBatchRenamer-v1.0.3-Portable.zip",
+    "sha256": "baa76011f76578d10341463eab6db4ee8b609bac2b05de344dfb83059528cab4",
+    "size_bytes": 171255350
+  },
+  "mandatory": false
+}

@@ -1,0 +1,23 @@
+[project]
+name = "pdf-batch-renamer"
+version = "0.1.0"
+description = "Đổi tên hàng loạt PDF chứng từ logistics theo nội dung bên trong file"
+requires-python = ">=3.11"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests", "tools"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "W"]
+ignore = [
+    "E501",   # độ dài dòng đã do formatter lo, không cần cảnh báo lặp
+    "B008",   # gọi hàm trong default arg — không dùng pattern này nhưng dataclass hay vướng
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["E402"]  # conftest phải chỉnh sys.path trước khi import src
+
+[tool.ruff.format]
+line-ending = "lf"

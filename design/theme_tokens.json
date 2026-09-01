@@ -1,0 +1,223 @@
+{
+  "$schema": "internal://pdf-batch-renamer/theme-tokens-1.0",
+  "version": "1.1.0",
+  "font": {
+    "family_ui": "Be Vietnam Pro, Segoe UI Variable Text, Segoe UI, sans-serif",
+    "family_mono": "Cascadia Mono, Segoe UI Mono, Consolas, monospace",
+    "size_xs": 10,
+    "size_sm": 11,
+    "size_base": 12,
+    "size_md": 14,
+    "size_lg": 16,
+    "weight_regular": 400,
+    "weight_medium": 500,
+    "weight_semibold": 600,
+    "weight_bold": 700
+  },
+  "radius": {
+    "sm": 4,
+    "md": 6,
+    "lg": 8,
+    "xl": 10,
+    "pill": 999
+  },
+  "space": {
+    "xs": 4,
+    "sm": 6,
+    "md": 8,
+    "lg": 12,
+    "xl": 16
+  },
+  "metrics": {
+    "toolbar_height": 46,
+    "button_height": 30,
+    "icon_button_size": 30,
+    "table_header_height": 32,
+    "table_row_height": 34,
+    "statusbar_height": 28,
+    "log_panel_height": 90,
+    "preview_dock_ratio": 0.4,
+    "nav_rail_width": 230,
+    "canvas_oversampling": 2.0,
+    "min_window": [
+      1280,
+      800
+    ],
+    "design_canvas": [
+      1440,
+      900
+    ]
+  },
+  "themes": {
+    "dark": {
+      "bg": "#0d1117",
+      "bg_sunken": "#0f141a",
+      "card": "#161b22",
+      "elevated": "#21262d",
+      "elevated_hover": "#262d36",
+      "row_hover": "#1c2128",
+      "border": "#30363d",
+      "border_subtle": "#21262d",
+      "border_strong": "#484f58",
+      "input_bg": "#0d1117",
+      "text": "#e6edf3",
+      "text_strong": "#ffffff",
+      "text_muted": "#8b949e",
+      "text_disabled": "#484f58",
+      "text_faint": "#6e7681",
+      "primary": "#1f6feb",
+      "primary_hover": "#388bfd",
+      "primary_text": "#79c0ff",
+      "primary_soft": "rgba(31,111,235,0.14)",
+      "focus_ring": "rgba(31,111,235,0.25)",
+      "success": "#238636",
+      "success_hover": "#2ea043",
+      "success_pressed": "#1a612a",
+      "accent_purple": "#8957e5",
+      "accent_purple_text": "#d2a8ff",
+      "status": {
+        "pending": {
+          "fg": "#58a6ff",
+          "bg": "rgba(88,166,255,0.15)",
+          "border": "rgba(88,166,255,0.35)"
+        },
+        "processing": {
+          "fg": "#d2a8ff",
+          "bg": "rgba(163,113,247,0.15)",
+          "border": "rgba(163,113,247,0.35)"
+        },
+        "success": {
+          "fg": "#3fb950",
+          "bg": "rgba(46,160,67,0.15)",
+          "border": "rgba(46,160,67,0.35)"
+        },
+        "duplicate": {
+          "fg": "#e3b341",
+          "bg": "rgba(210,153,34,0.15)",
+          "border": "rgba(210,153,34,0.35)"
+        },
+        "error": {
+          "fg": "#ff7b72",
+          "bg": "rgba(248,81,73,0.15)",
+          "border": "rgba(248,81,73,0.35)"
+        }
+      },
+      "row_error_bg": "rgba(248,81,73,0.06)",
+      "row_selected_bg": "rgba(31,111,235,0.16)",
+      "row_selected_marker": "#1f6feb",
+      "log": {
+        "info": "#58a6ff",
+        "ok": "#3fb950",
+        "warn": "#e3b341",
+        "error": "#ff7b72",
+        "time": "#6e7681"
+      },
+      "pdf_canvas": {
+        "page_bg": "#ffffff",
+        "page_shadow": "rgba(0,0,0,0.55)",
+        "hover_fill": "rgba(31,111,235,0.22)",
+        "hover_stroke": "#58a6ff",
+        "selected_fill": "rgba(35,134,54,0.28)",
+        "selected_stroke": "#2ea043",
+        "zone_stroke": "#1f6feb",
+        "zone_fill": "rgba(31,111,235,0.12)"
+      }
+    },
+    "light": {
+      "bg": "#f8fafc",
+      "bg_sunken": "#f1f5f9",
+      "card": "#ffffff",
+      "elevated": "#ffffff",
+      "elevated_hover": "#f1f5f9",
+      "row_hover": "#f8fafc",
+      "border": "#e2e8f0",
+      "border_subtle": "#f1f5f9",
+      "border_strong": "#94a3b8",
+      "input_bg": "#ffffff",
+      "text": "#1e293b",
+      "text_strong": "#0f172a",
+      "text_muted": "#64748b",
+      "text_disabled": "#94a3b8",
+      "text_faint": "#94a3b8",
+      "primary": "#0284c7",
+      "primary_hover": "#0369a1",
+      "primary_text": "#0284c7",
+      "primary_soft": "rgba(2,132,199,0.08)",
+      "focus_ring": "rgba(2,132,199,0.25)",
+      "success": "#16a34a",
+      "success_hover": "#15803d",
+      "success_pressed": "#166534",
+      "accent_purple": "#7c3aed",
+      "accent_purple_text": "#6d28d9",
+      "status": {
+        "pending": {
+          "fg": "#0284c7",
+          "bg": "rgba(2,132,199,0.08)",
+          "border": "rgba(2,132,199,0.25)"
+        },
+        "processing": {
+          "fg": "#7c3aed",
+          "bg": "rgba(124,58,237,0.08)",
+          "border": "rgba(124,58,237,0.25)"
+        },
+        "success": {
+          "fg": "#16a34a",
+          "bg": "rgba(22,163,74,0.08)",
+          "border": "rgba(22,163,74,0.25)"
+        },
+        "duplicate": {
+          "fg": "#d97706",
+          "bg": "rgba(217,119,6,0.08)",
+          "border": "rgba(217,119,6,0.25)"
+        },
+        "error": {
+          "fg": "#dc2626",
+          "bg": "rgba(220,38,38,0.08)",
+          "border": "rgba(220,38,38,0.25)"
+        }
+      },
+      "row_error_bg": "rgba(220,38,38,0.04)",
+      "row_selected_bg": "rgba(2,132,199,0.08)",
+      "row_selected_marker": "#0284c7",
+      "log": {
+        "info": "#0284c7",
+        "ok": "#16a34a",
+        "warn": "#d97706",
+        "error": "#dc2626",
+        "time": "#94a3b8"
+      },
+      "pdf_canvas": {
+        "page_bg": "#ffffff",
+        "page_shadow": "rgba(15,23,42,0.10)",
+        "hover_fill": "rgba(2,132,199,0.14)",
+        "hover_stroke": "#0284c7",
+        "selected_fill": "rgba(22,163,74,0.15)",
+        "selected_stroke": "#16a34a",
+        "zone_stroke": "#0284c7",
+        "zone_fill": "rgba(2,132,199,0.08)"
+      }
+    }
+  },
+  "status_map": {
+    "PENDING": {
+      "label": "Chờ",
+      "token": "pending"
+    },
+    "PROCESSING": {
+      "label": "Đang xử lý",
+      "token": "processing"
+    },
+    "SUCCESS": {
+      "label": "Thành công",
+      "token": "success"
+    },
+    "DUPLICATE": {
+      "label": "Trùng lặp",
+      "token": "duplicate"
+    },
+    "ERROR": {
+      "label": "Lỗi",
+      "token": "error"
+    }
+  }
+}

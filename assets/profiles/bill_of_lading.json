@@ -1,0 +1,85 @@
+{
+  "id": "bill-of-lading",
+  "name": "Bill of Lading",
+  "doctype": "BL",
+  "enabled": true,
+  "priority": 10,
+  "condition_mode": "any",
+  "conditions": [
+    {
+      "kind": "keyword",
+      "value": "BILL OF LADING",
+      "case_sensitive": false
+    },
+    {
+      "kind": "keyword",
+      "value": "SEA WAYBILL",
+      "case_sensitive": false
+    },
+    {
+      "kind": "regex",
+      "value": "\\bB/L\\s*(?:No|NUMBER)",
+      "case_sensitive": false
+    }
+  ],
+  "fields": [
+    {
+      "name": "number",
+      "label": "Số B/L",
+      "required": true,
+      "patterns": [
+        "B\\s*/?\\s*L\\s*(?:No|Number)\\.?\\s*[:\\-]?\\s*([A-Z0-9][A-Z0-9\\-/._]*)",
+        "(?:Document|Waybill)\\s*(?:No|Number)\\.?\\s*[:\\-]?\\s*([A-Z0-9][A-Z0-9\\-/._]*)",
+        "Bill\\s*of\\s*Lading\\s*(?:No|Number)\\.?\\s*[:\\-]?\\s*([A-Z0-9][A-Z0-9\\-/._]*)"
+      ],
+      "validate": "regex",
+      "validate_regex": "^[A-Z0-9][A-Z0-9\\-/._]{3,29}$"
+    },
+    {
+      "name": "doc_date",
+      "label": "Ngày phát hành",
+      "required": false,
+      "patterns": [
+        "(?:Date\\s*of\\s*Issue|Issue\\s*Date|Shipped\\s*on\\s*Board)\\s*[:\\-]?\\s*(\\d{1,2}[/\\-.]\\d{1,2}[/\\-.]\\d{2,4})",
+        "Date\\s*[:\\-]?\\s*(\\d{1,2}[/\\-.]\\d{1,2}[/\\-.]\\d{2,4})"
+      ],
+      "validate": "date"
+    },
+    {
+      "name": "container",
+      "label": "Số container",
+      "required": false,
+      "patterns": [
+        "\\b([A-Z]{4}\\s?\\d{6}\\s?\\d)\\b"
+      ],
+      "validate": "container",
+      "from_barcode": true
+    },
+    {
+      "name": "company",
+      "label": "Hãng tàu",
+      "required": false,
+      "patterns": [
+        "(?:Carrier|Ocean\\s*Carrier|Shipping\\s*Line)\\s*[:\\-]?\\s*([^\\n]{2,60})"
+      ],
+      "normalize_company": true
+    }
+  ],
+  "date_formats": [
+    "dd/mm/yyyy",
+    "dd-mm-yyyy",
+    "dd.mm.yyyy",
+    "dd-MMM-yyyy",
+    "yyyy-MM-dd",
+    "dd/mm/yy",
+    "dd-mm-yy",
+    "dd.mm.yy"
+  ],
+  "template": "{doc_date}_{doctype}_{number}_{container}_{company}",
+  "ai_enabled": false,
+  "version": 1,
+  "samples": [],
+  "is_fallback": false,
+  "exclude_conditions": [],
+  "fill_optional_fields": true
+}

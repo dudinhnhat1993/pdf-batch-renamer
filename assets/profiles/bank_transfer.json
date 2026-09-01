@@ -1,0 +1,69 @@
+{
+  "id": "bank_transfer",
+  "name": "Chuyển khoản ngân hàng",
+  "doctype": "BANK_TRANSFER",
+  "enabled": true,
+  "priority": 25,
+  "condition_mode": "any",
+  "conditions": [
+    {
+      "kind": "keyword",
+      "value": "VietinBank iPay",
+      "case_sensitive": false
+    },
+    {
+      "kind": "keyword",
+      "value": "Chi tiết giao dịch",
+      "case_sensitive": false
+    },
+    {
+      "kind": "keyword",
+      "value": "Giao dịch thành công",
+      "case_sensitive": false
+    }
+  ],
+  "exclude_conditions": [],
+  "fields": [
+    {
+      "name": "description",
+      "label": "Nội dung",
+      "required": true,
+      "patterns": [
+        "(?:Nội dung|Noi dung)\\s+(?:[A-Z0-9]{12,}\\s+){1,2}([\\s\\S]+?)(?=\\s*(?:Trạng thái|Trang thai|Phương thức|Kênh|Thời gian|\\Z))",
+        "(?:Nội dung|Noi dung)\\s+([\\s\\S]+?)(?=\\\\s*(?:Trạng thái|Trang thai|Phương thức|Kênh|Thời gian|\\Z))"
+      ]
+    },
+    {
+      "name": "doc_date",
+      "label": "Thời gian",
+      "required": false,
+      "patterns": [
+        "Thời gian\\s*[:\\-]?\\s*(\\d{1,2}[/\\-.]\\d{1,2}[/\\-.]\\d{2,4})",
+        "Date\\s*[:\\-]?\\s*(\\d{1,2}[/\\-.]\\d{1,2}[/\\-.]\\d{2,4})"
+      ],
+      "validate": "date"
+    },
+    {
+      "name": "reference",
+      "label": "Số tham chiếu",
+      "required": false,
+      "patterns": [
+        "Số tham chiếu\\s*[:\\-]?\\s*([A-Z0-9]+)"
+      ]
+    }
+  ],
+  "date_formats": [
+    "dd-mm-yyyy",
+    "dd/mm/yyyy",
+    "yyyy-MM-dd",
+    "dd.mm.yyyy",
+    "dd/mm/yy",
+    "dd-mm-yy"
+  ],
+  "template": "{description}",
+  "ai_enabled": false,
+  "version": 1,
+  "samples": [],
+  "is_fallback": false,
+  "fill_optional_fields": true
+}

@@ -1,0 +1,19 @@
+{
+  "_comment": "Alias -> tên chuẩn. Sửa trực tiếp trong app (Settings > Từ điển tên công ty).",
+  "aliases": {
+    "HLAG": "Hapag-Lloyd",
+    "HAPAG LLOYD AG": "Hapag-Lloyd",
+    "HAPAG-LLOYD AKTIENGESELLSCHAFT": "Hapag-Lloyd",
+    "MAERSK LINE": "Maersk",
+    "A P MOLLER MAERSK": "Maersk",
+    "MSC MEDITERRANEAN SHIPPING COMPANY": "MSC",
+    "CMA CGM SA": "CMA-CGM",
+    "ONE": "Ocean Network Express",
+    "OCEAN NETWORK EXPRESS PTE LTD": "Ocean Network Express",
+    "EVERGREEN MARINE CORP": "Evergreen",
+    "COSCO SHIPPING LINES": "COSCO",
+    "YANG MING MARINE TRANSPORT": "Yang Ming",
+    "HMM CO LTD": "HMM",
+    "SITC CONTAINER LINES": "SITC"
+  }
+}
