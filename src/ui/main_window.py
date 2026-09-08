@@ -9,20 +9,18 @@ Nguyên tắc:
 from __future__ import annotations
 
 import logging
-from datetime import datetime
 from pathlib import Path
 
 from PySide6.QtCore import QModelIndex, QObject, QPoint, QSize, Qt, QThread, Signal, Slot
-from PySide6.QtGui import QAction, QCloseEvent, QKeySequence, QPixmap
+from PySide6.QtGui import QAction, QCloseEvent, QKeySequence
 from PySide6.QtWidgets import (
-    QFrame,
-    QScrollArea,
     QAbstractItemView,
     QApplication,
     QCheckBox,
     QDialog,
     QDockWidget,
     QFileDialog,
+    QFrame,
     QHBoxLayout,
     QHeaderView,
     QLabel,
@@ -32,13 +30,13 @@ from PySide6.QtWidgets import (
     QPlainTextEdit,
     QProgressBar,
     QPushButton,
+    QScrollArea,
     QSizePolicy,
     QSplitter,
     QStyledItemDelegate,
     QStyleOptionViewItem,
-    QTabWidget,
     QTableView,
-    QTextBrowser,
+    QTabWidget,
     QToolBar,
     QToolButton,
     QVBoxLayout,
@@ -51,10 +49,12 @@ from src.core.models import FileJob, JobStatus
 from src.core.mover import list_sessions, undo_session
 from src.core.namer import render_template
 from src.core.pipeline import BatchSummary, Pipeline, scan_pdfs
-from src.core.version import __version__
-from src.core.updater import check_for_updates, query_update_status, UpdateManifest, DEFAULT_UPDATE_URL
-from src.ui.update_dialog import UpdateDialog
 from src.core.report import default_report_name, write_report
+from src.core.updater import (
+    DEFAULT_UPDATE_URL,
+    query_update_status,
+)
+from src.core.version import __version__
 from src.core.watcher import StableFileWatcher
 from src.ui.correction_dialog import CorrectionRuleDialog
 from src.ui.icons import get_app_icon, get_icon
@@ -65,6 +65,7 @@ from src.ui.rule_editor import RuleEditorDialog
 from src.ui.settings_dialog import SettingsDialog
 from src.ui.stats_dialog import StatsDialog
 from src.ui.theme import Theme, repolish
+from src.ui.update_dialog import UpdateDialog
 from src.ui.widgets.inspector_panel import InspectorPanel
 from src.ui.widgets.pdf_preview_dock import PdfPreviewDock
 from src.ui.widgets.status_badge import StatusBadgeDelegate
@@ -759,7 +760,7 @@ class MainWindow(QMainWindow):
         hdr_h = self.theme.metric("table_header_height") or 34
         hh.setFixedHeight(hdr_h)
         hh.setDefaultAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
-        
+
         # Thiết lập độ rộng cột chuẩn xác, không bao giờ bị cắt chữ F ở 'Field trích được'
         hh.setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)
         self.table.setColumnWidth(0, 95)  # Trạng thái
@@ -866,48 +867,7 @@ class MainWindow(QMainWindow):
     # ---------------------------------------------------------- file actions
 
 
-    def _trigger_startup_update_check(self) -> None:
-        """Kiểm tra cập nhật ngầm sau khi ứng dụng khởi động 2 giây."""
-        if getattr(self.ctx.config, "auto_check_update", True):
-            url = getattr(self.ctx.config, "update_url", "") or ""
-            self._update_worker = _UpdateCheckWorker(url)
-            self._update_worker.found_update.connect(self._on_update_found_startup)
-            self._update_worker.start()
 
-    def _on_update_found_startup(self, manifest: UpdateManifest) -> None:
-        dlg = UpdateDialog(manifest, self)
-        dlg.exec()
-
-    def _check_update_manual(self) -> None:
-        """Người dùng bấm nút Kiểm tra cập nhật trên thanh công cụ."""
-        url = getattr(self.ctx.config, "update_url", "") or ""
-        self.act_update.setEnabled(False)
-        self._manual_update_worker = _UpdateCheckWorker(url)
-        self._manual_update_worker.found_update.connect(self._on_update_found_manual)
-        self._manual_update_worker.no_update.connect(self._on_no_update_manual)
-        self._manual_update_worker.failed.connect(self._on_update_check_failed)
-        self._manual_update_worker.start()
-
-    def _on_update_found_manual(self, manifest: UpdateManifest) -> None:
-        self.act_update.setEnabled(True)
-        dlg = UpdateDialog(manifest, self)
-        dlg.exec()
-
-    def _on_no_update_manual(self) -> None:
-        self.act_update.setEnabled(True)
-        QMessageBox.information(
-            self,
-            "Đã cập nhật mới nhất",
-            f"Bạn đang sử dụng phiên bản mới nhất (v{__version__}). Không có bản cập nhật nào mới hơn.",
-        )
-
-    def _on_update_check_failed(self, err: str) -> None:
-        self.act_update.setEnabled(True)
-        QMessageBox.warning(
-            self,
-            "Không thể kết nối",
-            f"Không thể kiểm tra bản cập nhật lúc này:\n{err}\n\nVui lòng kiểm tra lại kết nối mạng.",
-        )
 
     def _choose_files(self) -> None:
         files, _ = QFileDialog.getOpenFileNames(self, "Chọn file PDF", "", "File PDF (*.pdf)")
@@ -1245,8 +1205,18 @@ class MainWindow(QMainWindow):
         if self.preview_model.rowCount() > 0:
             self.table.selectRow(0)
         self._on_row_selected()
-        if isinstance(result, BatchSummary) and not self.chk_dryrun.isChecked():
-            if result.errors > 0:
+        if isinstance(result, BatchSummary):
+            if self.chk_dryrun.isChecked():
+                QMessageBox.information(
+                    self,
+                    "Chạy thử hoàn tất (Dry-run)",
+                    f"Đã mô phỏng xử lý {result.total} file:\n"
+                    f"- Hợp lệ: {result.success}\n"
+                    f"- Lỗi: {result.errors}\n"
+                    f"- Trùng: {result.duplicate}\n\n"
+                    "Lưu ý: Chế độ chạy thử không ghi file ra đĩa.",
+                )
+            elif result.errors > 0:
                 QMessageBox.warning(
                     self,
                     "Hoàn tất với cảnh báo",
@@ -1423,7 +1393,7 @@ class MainWindow(QMainWindow):
         """Kiểm tra cập nhật thủ công và phản hồi kết quả chi tiết cho người dùng."""
         self.statusBar().showMessage("Đang kiểm tra bản cập nhật mới từ máy chủ...", 3000)
         QApplication.processEvents()
-        
+
         url = getattr(self.ctx.config, "update_url", "") or DEFAULT_UPDATE_URL
         status, manifest, err_msg = query_update_status(url, timeout=5)
 

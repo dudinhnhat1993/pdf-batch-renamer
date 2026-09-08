@@ -450,6 +450,7 @@ class Pipeline:
         *,
         progress: ProgressCallback | None = None,
         save_dataset: bool = True,
+        dry_run: bool = False,
     ) -> BatchSummary:
         """Thực thi: file ổn -> output, file lỗi -> _Loi/. Ghi registry, provenance, thống kê."""
         summary = BatchSummary(total=len(jobs), session_id=self.mover.session_id, jobs=jobs)
@@ -457,17 +458,26 @@ class Pipeline:
             try:
                 if job.status == JobStatus.DUPLICATE:
                     summary.duplicate += 1
-                    self.learning.record_match(job.profile_id, "duplicate", job.source.name)
+                    if not dry_run:
+                        self.learning.record_match(job.profile_id, "duplicate", job.source.name)
                 elif job.status == JobStatus.ERROR:
-                    self.mover.quarantine(job, job.message or "Không rõ lý do", job.error_code)
+                    if not dry_run:
+                        self.mover.quarantine(job, job.message or "Không rõ lý do", job.error_code)
                     summary.errors += 1
-                    self.learning.record_match(job.profile_id, "error", job.source.name)
+                    if not dry_run:
+                        self.learning.record_match(job.profile_id, "error", job.source.name)
                 else:
-                    dest = self.mover.apply(job)
-                    job.status = JobStatus.SUCCESS
-                    job.message = str(dest)
-                    summary.success += 1
-                    self._record_success(job, dest, save_dataset)
+                    if dry_run:
+                        dest = (job.dest_dir / job.new_name) if (job.dest_dir and job.new_name) else job.source
+                        job.status = JobStatus.SUCCESS
+                        job.message = f"[Dry-run] -> {dest.name}"
+                        summary.success += 1
+                    else:
+                        dest = self.mover.apply(job)
+                        job.status = JobStatus.SUCCESS
+                        job.message = str(dest)
+                        summary.success += 1
+                        self._record_success(job, dest, save_dataset)
             except PdfRenamerError as exc:
                 job.status = JobStatus.ERROR
                 job.error_code = getattr(exc, "code", "unknown")
@@ -483,8 +493,29 @@ class Pipeline:
             if progress:
                 progress(job, index, len(jobs))
 
-        summary.log_path = self.mover.save_log()
+        if not dry_run:
+            summary.log_path = self.mover.save_log()
         return summary
+
+    def process_batch(
+        self,
+        jobs: list[FileJob],
+        *,
+        dry_run: bool = False,
+        progress_callback: Callable[[int, int], None] | None = None,
+        save_dataset: bool = True,
+    ) -> BatchSummary:
+        """Thực thi xử lý một danh sách jobs, hỗ trợ dry_run và progress_callback(done, total)."""
+        def _prog(job: FileJob, done: int, total: int) -> None:
+            if progress_callback:
+                progress_callback(done, total)
+
+        return self.apply(
+            jobs,
+            progress=_prog if progress_callback else None,
+            save_dataset=save_dataset,
+            dry_run=dry_run,
+        )
 
     def _record_success(self, job: FileJob, dest: Path, save_dataset: bool) -> None:
         """Ghi registry chống trùng + provenance + dataset cho 1 file đã xuất thành công."""

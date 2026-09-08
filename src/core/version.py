@@ -3,7 +3,7 @@
 from __future__ import annotations
 import re
 
-__version__ = "1.0.3"
+__version__ = "1.0.4"
 APP_NAME = "PDF Batch Renamer"
 
 

@@ -372,3 +372,29 @@ class TestTimeoutDiscardsLateResult:
         note = output_root / "_Loi" / "cham.pdf.txt"
         assert note.exists()
         assert "timeout" in note.read_text(encoding="utf-8")
+
+class TestProcessBatchAndDryRun:
+    def test_process_batch_alias_va_progress(self, pipeline, inbox):
+        jobs = pipeline.plan([inbox], when=TODAY)
+        progress_calls = []
+
+        def on_prog(done, total):
+            progress_calls.append((done, total))
+
+        summary = pipeline.process_batch(jobs, dry_run=True, progress_callback=on_prog)
+        assert summary.total == len(jobs)
+        assert len(progress_calls) == len(jobs)
+        assert progress_calls[-1] == (len(jobs), len(jobs))
+
+    def test_apply_dry_run_khong_ghi_file_khong_ghi_db(self, pipeline, inbox, output_root):
+        jobs = pipeline.plan([inbox], when=TODAY)
+        summary = pipeline.apply(jobs, dry_run=True)
+
+        assert summary.success == 3
+        # Không có thư mục ngày hoặc file nào được tạo ở output_root
+        assert not (output_root / "2026-08-31").exists()
+        # Không ghi dedup registry
+        assert pipeline.dedup.count() == 0
+        # Không lưu operation log
+        assert summary.log_path is None
+

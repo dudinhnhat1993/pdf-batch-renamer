@@ -136,6 +136,13 @@ class TestBankTransferE2E:
             today_str = date.today().strftime("%Y-%m-%d")
             assert window.preview_model.data(window.preview_model.index(0, COL_DEST)) == today_str
             assert window.act_apply.isEnabled()
+
+            # 4. Test _run_apply và _ProcessWorker không bị lỗi 'Pipeline' object has no attribute 'process_batch'
+            window.chk_dryrun.setChecked(True)
+            window._run_apply()
+            assert window._worker is not None
+            window._worker.wait(5000)
+            assert window.preview_model.rowCount() == 1
         finally:
             window.close()
             ctx.close()
