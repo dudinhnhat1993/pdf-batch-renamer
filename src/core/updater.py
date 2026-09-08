@@ -1,18 +1,17 @@
 """PDF Batch Renamer — Engine tự động kiểm tra, tải và cài đặt bản cập nhật."""
 
 from __future__ import annotations
+
 import hashlib
 import json
 import logging
-import os
 import subprocess
 import sys
-import tempfile
 import urllib.error
 import urllib.request
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Callable
 
 from .version import __version__, is_newer_version
 
@@ -130,9 +129,15 @@ def query_update_status(
         return "LATEST", manifest, None
 
     try:
+        import time as _time
+        cache_url = f"{url}?_t={int(_time.time())}" if "?" not in url else f"{url}&_t={int(_time.time())}"
         req = urllib.request.Request(
-            url,
-            headers={"User-Agent": f"PDFBatchRenamer/{__version__} (Windows)"},
+            cache_url,
+            headers={
+                "User-Agent": f"PDFBatchRenamer/{__version__} (Windows)",
+                "Cache-Control": "no-cache",
+                "Pragma": "no-cache",
+            },
         )
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             if resp.status != 200:
