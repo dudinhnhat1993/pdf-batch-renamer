@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from src.core import barcode as _preload_barcode  # noqa: E402
 from src.core import db as db_module  # noqa: E402
 from src.core.config import AppConfig  # noqa: E402
 from src.core.db import Database  # noqa: E402

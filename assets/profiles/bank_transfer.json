@@ -18,7 +18,17 @@
     },
     {
       "kind": "keyword",
+      "value": "Chi tiet giao dich",
+      "case_sensitive": false
+    },
+    {
+      "kind": "keyword",
       "value": "Giao dịch thành công",
+      "case_sensitive": false
+    },
+    {
+      "kind": "keyword",
+      "value": "Giao dich thanh cong",
       "case_sensitive": false
     }
   ],
@@ -29,8 +39,8 @@
       "label": "Nội dung",
       "required": true,
       "patterns": [
-        "(?:Nội dung|Noi dung)\\s+(?:[A-Z0-9]{12,}\\s+){1,2}([\\s\\S]+?)(?=\\s*(?:Trạng thái|Trang thai|Phương thức|Kênh|Thời gian|\\Z))",
-        "(?:Nội dung|Noi dung)\\s+([\\s\\S]+?)(?=\\\\s*(?:Trạng thái|Trang thai|Phương thức|Kênh|Thời gian|\\Z))"
+        "(?:Nội dung|Noi dung)\\s+(?:[A-Z0-9]{12,}\\s+){1,2}([\\s\\S]+?)(?=\\s*(?:Trạng thái|Trang thai|Phương thức|Phuong thuc|Kênh|Kenh|Thời gian|Thoi gian|\\Z))",
+        "(?:Nội dung|Noi dung)\\s+([\\s\\S]+?)(?=\\s*(?:Trạng thái|Trang thai|Phương thức|Phuong thuc|Kênh|Kenh|Thời gian|Thoi gian|\\Z))"
       ]
     },
     {
@@ -38,7 +48,7 @@
       "label": "Thời gian",
       "required": false,
       "patterns": [
-        "Thời gian\\s*[:\\-]?\\s*(\\d{1,2}[/\\-.]\\d{1,2}[/\\-.]\\d{2,4})",
+        "(?:Thời gian|Thoi gian)\\s*[:\\-]?\\s*(\\d{1,2}[/\\-.]\\d{1,2}[/\\-.]\\d{2,4})",
         "Date\\s*[:\\-]?\\s*(\\d{1,2}[/\\-.]\\d{1,2}[/\\-.]\\d{2,4})"
       ],
       "validate": "date"
@@ -48,7 +58,7 @@
       "label": "Số tham chiếu",
       "required": false,
       "patterns": [
-        "Số tham chiếu\\s*[:\\-]?\\s*([A-Z0-9]+)"
+        "(?:Số tham chiếu|So tham chieu)\\s*[:\\-]?\\s*([A-Z0-9]+)"
       ]
     }
   ],
@@ -62,7 +72,7 @@
   ],
   "template": "{description}",
   "ai_enabled": false,
-  "version": 1,
+  "version": 2,
   "samples": [],
   "is_fallback": false,
   "fill_optional_fields": true

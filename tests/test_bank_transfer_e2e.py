@@ -182,3 +182,35 @@ class TestBankTransferE2E:
 
         assert [w.text for w in selected_words] == ["TAM", "CK", "PKT", "YE2607006", "T04.26"]
         assert view._join(selected_words) == "TAM CK PKT YE2607006 T04.26"
+
+    def test_trich_xuat_vietinbank_ipay_thuc_te_wr1_freight(self, config, profiles, db, tmp_path):
+        """Khớp đúng sao kê VietinBank iPay không có mã tham chiếu ở đầu nội dung và bóc tách thành công."""
+        from tools.make_fixtures import _text_pdf
+
+        lines = [
+            "VietinBank",
+            "Giao dich thanh cong",
+            "So tham chieu: 946K26911A9E75KD",
+            "Tai khoan nguon 106884718912 - NGUYEN VAN A - Tai khoan thanh toan",
+            "Tai khoan dich 0031000265088 - CONG TY TEST ABC",
+            "So tien giao dich -270,000 VND Hai tram bay muoi nghin dong",
+            "Ngan hang nhan TMCP Ngoai Thuong Viet Nam",
+            "Phi Mien phi",
+            "Noi dung WR1 FREIGHT CK PKT BK/2026/09/0185 ngay 22.09.26",
+            "Phuong thuc xac thuc Soft OTP",
+            "Thoi gian 22/09/2026 18:03:13",
+        ]
+        pdf_path = _text_pdf(tmp_path / "vietinbank_wr1.pdf", lines, title="VietinBank iPay")
+
+        extractor = Extractor(config, profiles)
+        doc = extractor.extract(pdf_path)
+        assert doc.profile_id == "bank_transfer"
+        assert "description" in doc.fields
+        assert doc.fields["description"].value.strip() == "WR1 FREIGHT CK PKT BK/2026/09/0185 ngay 22.09.26"
+        assert doc.fields["reference"].value.strip() == "946K26911A9E75KD"
+        assert doc.fields["doc_date"].value.strip() == "22/09/2026"
+
+        pipeline = Pipeline(config, profiles, db)
+        job = pipeline.plan_one(pdf_path, dry_run=True)
+        assert job.status == JobStatus.PENDING
+        assert job.new_name == "WR1 FREIGHT CK PKT BK2026090185 ngay 22.09.26.pdf"

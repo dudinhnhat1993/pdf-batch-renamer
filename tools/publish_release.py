@@ -62,6 +62,9 @@ def main() -> None:
     changelog = args.notes or ["Cap nhat tinh nang va sua loi he thong."]
 
     print(f"=== Bat dau phat hanh phien ban v{new_ver} ===")
+    print("\n[0/3] Kiem tra an ninh & DLP truoc khi phat hanh...")
+    subprocess.run([sys.executable, str(ROOT / "tools" / "security_guard.py")], check=True)
+
     update_version_files(new_ver)
 
     print("\n[1/3] Bien dich Full PyInstaller bundle...")

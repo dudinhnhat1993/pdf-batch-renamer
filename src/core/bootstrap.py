@@ -62,6 +62,30 @@ def seed_defaults(store: ProfileStore) -> int:
     return count
 
 
+def repair_known_profile_bugs(store: ProfileStore) -> int:
+    """Tự động sửa các lỗi regex đã biết trong profile (ví dụ lỗi \\\\s* trong bank_transfer)
+    kể cả khi người dùng đã có profile từ phiên bản trước đó.
+    """
+    repaired = 0
+    for profile in store.load_all():
+        modified = False
+        for f in profile.fields:
+            new_patterns = []
+            for p in f.patterns:
+                if "\\\\s" in p:
+                    p_fixed = p.replace("\\\\s", "\\s")
+                    new_patterns.append(p_fixed)
+                    modified = True
+                else:
+                    new_patterns.append(p)
+            f.patterns = new_patterns
+        if modified:
+            store.save(profile, bump_version=True)
+            logger.info("Đã tự động sửa regex cho profile '%s' (v%s)", profile.name, profile.version)
+            repaired += 1
+    return repaired
+
+
 def force_utf8_streams() -> None:
     """Console Windows mặc định không phải UTF-8 — không ép thì log tiếng Việt ra rác."""
     for stream in (sys.stdout, sys.stderr):
@@ -191,6 +215,9 @@ def build_context(config_path: Path | None = None, seed: bool = True) -> AppCont
         added = seed_defaults(store)
         if added:
             logger.info("Đã nạp %s profile mẫu vào %s", added, profiles_dir())
+        repaired = repair_known_profile_bugs(store)
+        if repaired:
+            logger.info("Đã tự động sửa %s profile có lỗi cú pháp", repaired)
     return AppContext(config, store, get_db())
 
 

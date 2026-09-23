@@ -20,11 +20,34 @@ KEYRING_SERVICE = "PDFBatchRenamer"
 ENV_HOME = "PDFRENAMER_HOME"
 
 
+def is_portable_mode() -> bool:
+    """Kiểm tra ứng dụng có đang chạy ở chế độ Portable hay không."""
+    import sys
+    if getattr(sys, "frozen", False):
+        exe_dir = Path(sys.executable).resolve().parent
+        return (exe_dir / ".portable").exists() or (exe_dir / "data").is_dir()
+    return False
+
+
 def app_dir() -> Path:
-    """Thư mục dữ liệu của app: %APPDATA%/PDFBatchRenamer (hoặc override bằng env)."""
+    """Thư mục dữ liệu của app: %APPDATA%/PDFBatchRenamer (hoặc override bằng env hoặc chế độ portable)."""
     override = os.environ.get(ENV_HOME)
     if override:
         return Path(override)
+
+    if is_portable_mode():
+        import sys
+        exe_dir = Path(sys.executable).resolve().parent
+        p_data = exe_dir / "data"
+        try:
+            p_data.mkdir(parents=True, exist_ok=True)
+            test_file = p_data / ".write_test"
+            test_file.touch()
+            test_file.unlink()
+            return p_data
+        except OSError:
+            logger.warning("Thư mục portable không có quyền ghi, chuyển về %%APPDATA%%")
+
     base = os.environ.get("APPDATA") or os.path.expanduser("~/.config")
     return Path(base) / APP_NAME
 

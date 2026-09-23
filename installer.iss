@@ -2,7 +2,7 @@
 ; Inno Setup 6.x
 
 #define MyAppName "PDF Batch Renamer"
-#define MyAppVersion "1.0.4"
+#define MyAppVersion "1.0.5"
 #define MyAppPublisher "Đình Nhất"
 #define MyAppURL ""
 #define MyAppExeName "PDFBatchRenamer.exe"
@@ -21,7 +21,7 @@ AllowNoIcons=yes
 PrivilegesRequiredOverridesAllowed=dialog
 PrivilegesRequired=lowest
 OutputDir=dist\installer
-OutputBaseFilename=PDFBatchRenamer-Setup-v1.0.4
+OutputBaseFilename=PDFBatchRenamer-Setup-v1.0.5
 SetupIconFile=assets\app_icon.ico
 Compression=lzma2/ultra64
 SolidCompression=yes

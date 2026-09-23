@@ -77,6 +77,7 @@ can giai nen thu cong, hay dung file cai dat "PDFBatchRenamer-Setup-v{__version_
     zip_path = DIST / f"PDFBatchRenamer-v{__version__}-Portable.zip"
     print(f"=== Dang nen ban Portable: {zip_path} ===")
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED, compresslevel=6) as zf:
+        zf.writestr("PDFBatchRenamer-Portable/.portable", "PDF Batch Renamer True Portable Mode Marker\n")
         for file in FULL_DIR.rglob("*"):
             if file.is_file():
                 rel = file.relative_to(FULL_DIR)

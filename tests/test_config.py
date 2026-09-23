@@ -103,6 +103,49 @@ class TestSeed:
         assert (isolated_home / "dictionaries" / "companies.json").exists()
         ctx.close()
 
+    def test_repair_known_profile_bugs(self, tmp_path):
+        from src.core.bootstrap import repair_known_profile_bugs
+        from src.core.models import FieldSpec, Profile
+
+        store = ProfileStore(tmp_path / "profiles")
+        buggy_p = Profile(
+            id="test_buggy",
+            name="Test Buggy",
+            fields=[
+                FieldSpec(
+                    name="description",
+                    label="Nội dung",
+                    patterns=[r"(?:Nội dung)\s+([\s\S]+?)(?=\\s*(?:Phương thức))"],
+                )
+            ],
+            version=1,
+        )
+        store.save(buggy_p)
+        assert repair_known_profile_bugs(store) == 1
+
+        repaired = store.get("test_buggy")
+        assert "\\\\s" not in repaired.fields[0].patterns[0]
+        assert r"\s*" in repaired.fields[0].patterns[0]
+        assert repaired.version == 2
+
+    def test_portable_mode(self, tmp_path, monkeypatch):
+        import sys
+        from src.core.config import app_dir, is_portable_mode
+
+        # Bỏ env override tạm thời để test portable mode
+        monkeypatch.delenv("PDFRENAMER_HOME", raising=False)
+        monkeypatch.setattr(sys, "frozen", True, raising=False)
+        fake_exe = tmp_path / "PDFBatchRenamer.exe"
+        fake_exe.touch()
+        monkeypatch.setattr(sys, "executable", str(fake_exe))
+
+        assert not is_portable_mode()
+        (tmp_path / ".portable").touch()
+        assert is_portable_mode()
+        assert app_dir() == tmp_path / "data"
+        assert (tmp_path / "data").is_dir()
+
+
 
 class TestTimeUtil:
     """Hiển thị luôn theo giờ máy, dù DB lưu UTC."""

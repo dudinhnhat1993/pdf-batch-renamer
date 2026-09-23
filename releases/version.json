@@ -1,21 +1,21 @@
 {
-  "version": "1.0.4",
-  "release_date": "2026-09-08",
+  "version": "1.0.5",
+  "release_date": "2026-09-23",
   "min_supported_version": "1.0.0",
-  "title": "Ban phat hanh PDF Batch Renamer v1.0.4",
+  "title": "Ban phat hanh PDF Batch Renamer v1.0.5",
   "changelog": [
-    "Sua loi process_batch khi bam Ap dung",
-    "Ho tro che do Chay thu Dry-run va cap nhat tien trinh apply on dinh"
+    "Sua loi regex boc tach Noi dung sao ke VietinBank tren may moi",
+    "Nang cap True Portable Mode tu luu du lieu di kem thu muc portable"
   ],
   "installer": {
-    "url": "https://github.com/dudinhnhat1993/pdf-batch-renamer/releases/download/v1.0.4/PDFBatchRenamer-Setup-v1.0.4.exe",
-    "sha256": "d5cc77427bec566e43af538e4eafa3b49ae01ec0ff464c2be31f937dadebc4f9",
-    "size_bytes": 112471048
+    "url": "https://github.com/dudinhnhat1993/pdf-batch-renamer/releases/download/v1.0.5/PDFBatchRenamer-Setup-v1.0.5.exe",
+    "sha256": "e974b9f9c53365051e1f3e9a8fd5afc7f42053d4d7c6769e0d049f1f8c1578f0",
+    "size_bytes": 112482491
   },
   "portable": {
-    "url": "https://github.com/dudinhnhat1993/pdf-batch-renamer/releases/download/v1.0.4/PDFBatchRenamer-v1.0.4-Portable.zip",
-    "sha256": "96776da7a0face7c408f87511eb38d63133759471201e5bb401efa978d50d901",
-    "size_bytes": 171254914
+    "url": "https://github.com/dudinhnhat1993/pdf-batch-renamer/releases/download/v1.0.5/PDFBatchRenamer-v1.0.5-Portable.zip",
+    "sha256": "87c8a604a0a96c57148c9ec4a4b4f4873014fa6e3e9cb476eccf72a8f56bc6af",
+    "size_bytes": 171257742
   },
   "mandatory": false
 }
